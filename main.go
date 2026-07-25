@@ -1,69 +1,53 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"net"
-	"os"
-	"os/signal"
-	"strings"
-	"time"
+	"log"
+	"net/http"
 
-	"gamon/ping"
+	"gamon/handler"
+	"gamon/monitor"
 )
 
-const banner = `
-===========================================
-   GAMON - Garda Monitoring v0.1
-   Realtime Network Monitor (CLI)
-===========================================`
-
 func main() {
-	fmt.Println(banner)
-	fmt.Println()
+	hub := handler.NewHub()
+	go hub.Run()
 
-	reader := bufio.NewReader(os.Stdin)
+	engine := monitor.NewEngine(hub)
 
-	fmt.Print("Masukkan IP Target: ")
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
+	mux := http.NewServeMux()
 
-	if net.ParseIP(input) == nil {
-		// Coba resolve sebagai domain
-		_, err := net.LookupHost(input)
-		if err != nil {
-			fmt.Printf("\n[ERROR] '%s' bukan IP address atau domain yang valid!\n", input)
-			os.Exit(1)
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		handler.HandleWebSocket(hub, w, r)
+	})
+
+	api := handler.NewAPI(engine, hub)
+	mux.HandleFunc("/api/monitor", api.StartMonitor)
+	mux.HandleFunc("/api/stop", api.StopMonitor)
+	mux.HandleFunc("/api/health", api.Health)
+
+	wrapped := corsMiddleware(mux)
+
+	fmt.Println("===========================================")
+	fmt.Println("   GAMON - Garda Monitoring v0.2")
+	fmt.Println("   Web Backend Server")
+	fmt.Println("   Running on http://localhost:8080")
+	fmt.Println("===========================================")
+
+	log.Fatal(http.ListenAndServe(":8080", wrapped))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
 		}
-	}
 
-	// Handle CTRL+C
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	fmt.Printf("\nMonitoring %s dimulai... (CTRL+C untuk berhenti)\n\n", input)
-
-	seq := 0
-
-	// Ping pertama langsung
-	seq++
-	result := ping.PingOnce(input)
-	result.Seq = seq
-	fmt.Println(ping.FormatOutput(result))
-
-	for {
-		select {
-		case <-sigChan:
-			fmt.Printf("\n\nMonitoring dihentikan. Total ping: %d\n", seq)
-			os.Exit(0)
-		case <-ticker.C:
-			seq++
-			result := ping.PingOnce(input)
-			result.Seq = seq
-			fmt.Println(ping.FormatOutput(result))
-		}
-	}
+		next.ServeHTTP(w, r)
+	})
 }
