@@ -1,0 +1,42 @@
+ToDoList GAMON
+1. Jitter (Variasi Latency): Hitung selisih kestabilan antara ping pertama, kedua, dan ketiga. Jika latency naik turun drastis (misal: 2ms -> 150ms -> 5ms), itu tanda jaringan sedang Unstable/Congested (macet), meskipun statusnya tetap "Online". Ini informasi yang sangat mahal buat anak NOC!
+
+2. Packet Loss Rate (%): Jangan cuma ping 1 kali. Minta Go untuk kirim 5 paket sekaligus. Jika cuma balik 4, artinya ada packet loss 20%. Di dashboard React, lu bisa tampilin indikator: Loss 0% (Sehat), Loss 20% (Gangguan), Loss 100% (Down).
+
+3. Akurasi SLA (Uptime Percentage): Buat satu variabel di Go untuk mencatat sejarah waktu. Berapa menit perangkat itu hidup dibanding total waktu aplikasi berjalan. Nanti di React tampil angka keren: "Uptime: 99.8%".
+
+4. TCP Port Checker (Layanan Aplikasi): Sering kali perangkatnya hidup (bisa di-ping), tapi web atau database di dalamnya mati (crash). Lu bisa tambah fitur cek Port 80/443 (Web), 3306 (MySQL), atau 22 (SSH). Jadi di dashboard nanti ada status tambahan: Network: Online, Services: MySQL Down.
+
+5. SNMP Polling (Metrik Fisik Perangkat): Jika waktu PKL lu masih panjang, coba aktifkan fitur SNMP di Mikrotik tempat PKL lu. Pake library Go untuk nembak port SNMP perangkat. Lu bisa dapetin informasi fisik secara realtime seperti: Penggunaan CPU (%), RAM (%), dan Suhu Perangkat (Celcius).
+
+6. Telegram Bot / Discord Alert (Wajib Banget): Ini solusi inti dari masalah lu. Anak NOC kan lupa liat dashboard, nah begitu status berubah jadi Down atau Packet Loss > 50%, backend Golang langsung otomatis nembak pesan ke Grup Telegram: "⚠️ PERINGATAN: Router Lantai 2 Down jam 14:00!".
+
+7. CRUD Data Perangkat (Supaya Dinamis): Buat form di React untuk tambah/hapus IP perangkat baru, lalu simpan ke database (bisa pakai SQLite biar gak ribet instal MySQL/XAMPP di server).
+
+
+----
+
+## 1. Tahap 1: Core Scanning Engine (ICMP Ping Sederhana)
+Jangan langsung membuat yang rumit. Buat mesin utama di backend Golang yang bertugas melakukan ping dasar (os/exec) ke beberapa IP secara berkala via Goroutine.
+
+* Kenapa pertama?: Ini adalah penentu apakah logika utama aplikasi lu berjalan atau tidak. Sisi Frontend React lu cukup menangkap data online/down dari WebSocket ini.
+
+## 2. Tahap 2: Management Devices & CRUD Sederhana (Database)
+Setelah engine bisa mengecek IP, sekarang buat agar daftar IP tersebut tidak kaku di dalam kode (hardcoded). Integrasikan Golang dengan database ringan (seperti SQLite yang tidak butuh instalasi XAMPP, cukup berupa satu file .db).
+
+* Target: Buat fungsi Create (Tambah IP) dan Delete (Hapus IP) terlebih dahulu. Begitu lu tambah IP di React, Golang langsung memasukkannya ke database dan otomatis ikut di-ping oleh Goroutine.
+
+## 3. Tahap 3: Advanced ICMP Analytics (Jitter & Packet Loss)
+Ketika CRUD dan Ping dasar sudah terhubung lancar, saatnya melakukan upgrade pada mesin utama lu.
+
+* Target: Ubah parameter ping di Golang agar mengirim 3-5 paket sekaligus. Ambil datanya untuk menghitung Packet Loss Rate dan Jitter. Perbarui struktur data JSON WebSocket agar Frontend React bisa menampilkan grafik atau indikator persentase yang lebih kaya.
+
+## 4. Tahap 4: Intelligent Alerts (Telegram Bot & Audio Alarm)
+Sistem pemantauan lu sekarang sudah kaya akan data. Saatnya menyelesaikan masalah utama anak NOC: "sering tidak sadar kalau ada jaringan mati".
+
+* Target: Pasang fungsi di Golang untuk menembak API Telegram Bot jika ada perangkat yang statusnya berubah menjadi Down. Tambahkan juga library audio atau tag <audio> di React agar browser di PC NOC membunyikan suara sirine.
+
+## 5. Tahap 5: Ekstensi Metode (TCP Port & SNMP)
+Tahap terakhir ini adalah opsional (bonus score untuk sidang). Jika semua tahap di atas sudah selesai dan lu masih punya waktu luang sebelum sidang PKL.
+
+* Target: Tambahkan fitur pengecekan Port TCP (Port 80/3306) atau penarikan data suhu/CPU via SNMP pada perangkat yang sudah ada di database.
