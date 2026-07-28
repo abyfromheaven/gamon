@@ -9,7 +9,9 @@ import (
 )
 
 type Result struct {
+	DeviceID  int     `json:"device_id"`
 	IP        string  `json:"ip"`
+	Method    string  `json:"method"`
 	Status    string  `json:"status"`
 	Latency   float64 `json:"latency"`
 	TTL       int     `json:"ttl"`
