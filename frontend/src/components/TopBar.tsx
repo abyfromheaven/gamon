@@ -32,9 +32,7 @@ export function TopBar({ isConnected }: TopBarProps) {
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8 h-14 flex items-center justify-between">
         {/* Left: Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
-            <span className="text-accent font-bold text-sm">G</span>
-          </div>
+          <img src="/gamon-logo.svg" alt="Gamon" className="w-8 h-8 text-accent" />
           <div className="flex items-baseline gap-2">
             <span className="font-semibold text-text-primary tracking-tight">GAMON</span>
             <span className="text-text-muted text-xs hidden sm:inline">Garda Monitoring</span>

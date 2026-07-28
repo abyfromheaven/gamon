@@ -23,6 +23,20 @@ export interface APIResponse {
 
 export type DeviceType = 'Server' | 'Router' | 'Switch' | 'Access Point' | 'Website';
 
+export type DeviceMethod = 'ICMP Ping';
+
+export interface Device {
+  id: number;
+  name: string;
+  type: DeviceType;
+  ip: string;
+  method: DeviceMethod;
+  port: number | null;
+  location: string;
+  status: 'active' | 'inactive';
+  lastSeen: string | null;
+}
+
 export type AlertSeverity = 'critical' | 'warning' | 'info';
 
 export interface DeviceBreakdown {
