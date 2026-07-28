@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Halaman Web.md",
+                "file": "PRD Integrasi MVP.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Halaman Web"
+              "title": "PRD Integrasi MVP"
             }
           }
         ]
@@ -78,7 +78,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 203.5
+    "width": 203.5,
+    "collapsed": true
   },
   "right": {
     "id": "ddee1a4a60d9ee3e",
@@ -185,8 +186,8 @@
   },
   "active": "27b686fc2b397ad7",
   "lastOpenFiles": [
-    "Fondasi Non-Monitoring yang Perlu Dibangun.md",
     "Halaman Web.md",
+    "Fondasi Non-Monitoring yang Perlu Dibangun.md",
     "Orkestrasi Tools Industri di Latar Belakang GAMON.md",
     "Tools Jaringan Cyber Security.md",
     "mMengapa Alat Monitoring Terkenal Aman?.md",

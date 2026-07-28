@@ -4,6 +4,7 @@ import { Sidebar, type Page } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { DashboardPage } from './pages/DashboardPage';
 import { DeviceManagementPage } from './pages/DeviceManagementPage';
+import { AlertCenterPage } from './pages/AlertCenterPage';
 
 function App() {
   const { isConnected } = useWebSocket();
@@ -24,6 +25,7 @@ function App() {
         <main className="flex-1 overflow-auto">
           {currentPage === 'dashboard' && <DashboardPage />}
           {currentPage === 'devices' && <DeviceManagementPage />}
+          {currentPage === 'alerts' && <AlertCenterPage />}
         </main>
       </div>
     </div>

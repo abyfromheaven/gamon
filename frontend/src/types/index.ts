@@ -37,7 +37,9 @@ export interface Device {
   lastSeen: string | null;
 }
 
-export type AlertSeverity = 'critical' | 'warning' | 'info';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type AlertStatus = 'ongoing' | 'resolved';
 
 export interface DeviceBreakdown {
   type: DeviceType;
@@ -47,10 +49,15 @@ export interface DeviceBreakdown {
 
 export interface Alert {
   id: number;
+  title: string;
   device: string;
-  message: string;
+  deviceType: DeviceType;
+  status: AlertStatus;
   severity: AlertSeverity;
-  time: string;
+  startTime: string;
+  resolvedTime: string | null;
+  description: string;
+  monitoringMethod: string;
   timestamp: number;
 }
 

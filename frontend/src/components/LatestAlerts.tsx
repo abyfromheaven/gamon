@@ -11,12 +11,17 @@ const severityStyles: Record<AlertSeverity, { dot: string; text: string; bg: str
     text: 'text-danger',
     bg: 'bg-danger-muted',
   },
-  warning: {
+  high: {
+    dot: 'bg-[#EA580C]',
+    text: 'text-[#EA580C]',
+    bg: 'bg-[rgba(234,88,12,0.12)]',
+  },
+  medium: {
     dot: 'bg-warning',
     text: 'text-warning',
     bg: 'bg-warning-muted',
   },
-  info: {
+  low: {
     dot: 'bg-success',
     text: 'text-success',
     bg: 'bg-success-muted',
@@ -25,8 +30,9 @@ const severityStyles: Record<AlertSeverity, { dot: string; text: string; bg: str
 
 const severityLabels: Record<AlertSeverity, string> = {
   critical: 'CRIT',
-  warning: 'WARN',
-  info: 'INFO',
+  high: 'HIGH',
+  medium: 'MED',
+  low: 'LOW',
 };
 
 export function LatestAlerts({ alerts, onViewAll }: LatestAlertsProps) {
@@ -55,10 +61,10 @@ export function LatestAlerts({ alerts, onViewAll }: LatestAlertsProps) {
                     {severityLabels[alert.severity]}
                   </span>
                 </div>
-                <p className="text-xs text-text-muted truncate">{alert.message}</p>
+                <p className="text-xs text-text-muted truncate">{alert.title}</p>
               </div>
               <span className="text-[10px] text-text-muted font-mono shrink-0 mt-0.5">
-                {alert.time}
+                {alert.startTime}
               </span>
             </div>
           );
