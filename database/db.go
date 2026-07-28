@@ -49,6 +49,7 @@ func migrate(db *sql.DB) error {
 			method TEXT NOT NULL DEFAULT 'ICMP Ping',
 			location TEXT DEFAULT '',
 			check_interval INTEGER DEFAULT 3,
+			status TEXT DEFAULT 'active',
 			description TEXT DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -86,6 +87,9 @@ func migrate(db *sql.DB) error {
 			return fmt.Errorf("migration failed: %w", err)
 		}
 	}
+
+	// Migration: tambah kolom status ke tabel devices jika belum ada
+	_, _ = db.Exec("ALTER TABLE devices ADD COLUMN status TEXT DEFAULT 'active'")
 
 	return nil
 }

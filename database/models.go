@@ -12,6 +12,7 @@ type Device struct {
 	Method         string    `json:"method"`
 	Location       string    `json:"location"`
 	CheckInterval  int       `json:"check_interval"`
+	Status         string    `json:"status"`
 	Description    string    `json:"description"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

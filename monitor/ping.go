@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+const (
+	StatusOnline  = "online"
+	StatusWarning = "warning"
+	StatusOffline = "offline"
+
+	LatencyWarningThreshold = 200.0
+)
+
 type Result struct {
 	DeviceID  int     `json:"device_id"`
 	IP        string  `json:"ip"`
@@ -22,7 +30,7 @@ type Result struct {
 func PingOnce(ip string, seq int) Result {
 	result := Result{
 		IP:        ip,
-		Status:    "down",
+		Status:    StatusOffline,
 		Latency:   0,
 		TTL:       0,
 		Seq:       seq,
@@ -49,7 +57,7 @@ func PingOnce(ip string, seq int) Result {
 			continue
 		}
 
-		result.Status = "online"
+		result.Status = StatusOnline
 
 		for _, field := range strings.Fields(line) {
 			if kv := strings.SplitN(field, "=", 2); len(kv) == 2 {
@@ -65,6 +73,10 @@ func PingOnce(ip string, seq int) Result {
 				}
 			}
 		}
+	}
+
+	if result.Status == StatusOnline && result.Latency >= LatencyWarningThreshold {
+		result.Status = StatusWarning
 	}
 
 	return result

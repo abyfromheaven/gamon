@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,11 +26,12 @@ type Client struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-	mu         sync.RWMutex
+	clients        map[*Client]bool
+	broadcast      chan []byte
+	register       chan *Client
+	unregister     chan *Client
+	mu             sync.RWMutex
+	db             *sql.DB
 }
 
 type Message struct {
@@ -36,12 +39,23 @@ type Message struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func NewHub() *Hub {
+type DeviceStatus struct {
+	DeviceID  int     `json:"device_id"`
+	Name      string  `json:"name"`
+	Type      string  `json:"type"`
+	IP        string  `json:"ip"`
+	Status    string  `json:"status"`
+	LatencyMs float64 `json:"latency_ms"`
+	LastCheck string  `json:"last_check"`
+}
+
+func NewHub(db *sql.DB) *Hub {
 	return &Hub{
 		clients:    make(map[*Client]bool),
 		broadcast:  make(chan []byte, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		db:         db,
 	}
 }
 
@@ -53,6 +67,8 @@ func (h *Hub) Run() {
 			h.clients[client] = true
 			h.mu.Unlock()
 			log.Printf("Client connected. Total: %d", len(h.clients))
+
+			go h.sendInitialState(client)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -76,6 +92,65 @@ func (h *Hub) Run() {
 			h.mu.RUnlock()
 		}
 	}
+}
+
+func (h *Hub) sendInitialState(client *Client) {
+	time.Sleep(100 * time.Millisecond)
+
+	statuses := h.getAllDeviceStatuses()
+
+	initialState := map[string]interface{}{
+		"type": "initial_state",
+		"data": statuses,
+	}
+
+	dataBytes, err := json.Marshal(initialState)
+	if err != nil {
+		log.Printf("Error marshaling initial state: %v", err)
+		return
+	}
+
+	select {
+	case client.send <- dataBytes:
+		log.Printf("Sent initial state to client (%d devices)", len(statuses))
+	default:
+		log.Printf("Failed to send initial state: client send buffer full")
+	}
+}
+
+func (h *Hub) getAllDeviceStatuses() []DeviceStatus {
+	var statuses []DeviceStatus
+
+	rows, err := h.db.Query(`
+		SELECT d.id, d.name, d.type, d.ip,
+			COALESCE(ph.status, 'unknown') as last_status,
+			COALESCE(ph.latency_ms, 0) as last_latency,
+			COALESCE(ph.timestamp, d.created_at) as last_check
+		FROM devices d
+		LEFT JOIN ping_history ph ON ph.id = (
+			SELECT id FROM ping_history WHERE device_id = d.id ORDER BY id DESC LIMIT 1
+		)
+		WHERE d.status = 'active'
+		ORDER BY d.name
+	`)
+	if err != nil {
+		log.Printf("Error querying device statuses: %v", err)
+		return statuses
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ds DeviceStatus
+		var lastCheck string
+		if err := rows.Scan(&ds.DeviceID, &ds.Name, &ds.Type, &ds.IP, &ds.Status, &ds.LatencyMs, &lastCheck); err != nil {
+			log.Printf("Error scanning device status: %v", err)
+			continue
+		}
+		ds.LastCheck = lastCheck
+		statuses = append(statuses, ds)
+	}
+
+	return statuses
 }
 
 func (h *Hub) Broadcast(msgType string, data interface{}) {

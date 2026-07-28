@@ -30,6 +30,7 @@ type CreateDeviceRequest struct {
 	Method        string `json:"method"`
 	Location      string `json:"location"`
 	CheckInterval int    `json:"check_interval"`
+	Status        string `json:"status"`
 	Description   string `json:"description"`
 }
 
@@ -42,7 +43,12 @@ type UpdateDeviceRequest struct {
 	Method        *string `json:"method"`
 	Location      *string `json:"location"`
 	CheckInterval *int    `json:"check_interval"`
+	Status        *string `json:"status"`
 	Description   *string `json:"description"`
+}
+
+type ToggleStatusRequest struct {
+	Status string `json:"status"`
 }
 
 func (h *DeviceHandler) HandleDevices(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +81,10 @@ func (h *DeviceHandler) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		h.stopMonitoring(w, r, id)
 		return
 	}
+	if len(parts) > 1 && parts[1] == "status" {
+		h.toggleStatus(w, r, id)
+		return
+	}
 
 	switch r.Method {
 	case http.MethodGet:
@@ -89,7 +99,7 @@ func (h *DeviceHandler) HandleDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeviceHandler) listDevices(w http.ResponseWriter, _ *http.Request) {
-	rows, err := h.db.Query("SELECT id, name, type, ip, url, port, method, location, check_interval, description, created_at, updated_at FROM devices ORDER BY created_at DESC")
+	rows, err := h.db.Query("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices ORDER BY created_at DESC")
 	if err != nil {
 		log.Printf("Error listing devices: %v", err)
 		respondError(w, http.StatusInternalServerError, "Failed to list devices")
@@ -107,6 +117,7 @@ func (h *DeviceHandler) listDevices(w http.ResponseWriter, _ *http.Request) {
 		Method        string `json:"method"`
 		Location      string `json:"location"`
 		CheckInterval int    `json:"check_interval"`
+		Status        string `json:"status"`
 		Description   string `json:"description"`
 		CreatedAt     string `json:"created_at"`
 		UpdatedAt     string `json:"updated_at"`
@@ -116,7 +127,7 @@ func (h *DeviceHandler) listDevices(w http.ResponseWriter, _ *http.Request) {
 	for rows.Next() {
 		var d DeviceResponse
 		var createdAt, updatedAt string
-		if err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Description, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &createdAt, &updatedAt); err != nil {
 			log.Printf("Error scanning device: %v", err)
 			continue
 		}
@@ -142,6 +153,7 @@ func (h *DeviceHandler) getDevice(w http.ResponseWriter, _ *http.Request, id int
 		Method        string `json:"method"`
 		Location      string `json:"location"`
 		CheckInterval int    `json:"check_interval"`
+		Status        string `json:"status"`
 		Description   string `json:"description"`
 		CreatedAt     string `json:"created_at"`
 		UpdatedAt     string `json:"updated_at"`
@@ -149,8 +161,8 @@ func (h *DeviceHandler) getDevice(w http.ResponseWriter, _ *http.Request, id int
 
 	var d DeviceResponse
 	var createdAt, updatedAt string
-	err := h.db.QueryRow("SELECT id, name, type, ip, url, port, method, location, check_interval, description, created_at, updated_at FROM devices WHERE id = ?", id).
-		Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Description, &createdAt, &updatedAt)
+	err := h.db.QueryRow("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices WHERE id = ?", id).
+		Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		respondError(w, http.StatusNotFound, "Device not found")
 		return
@@ -190,10 +202,17 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 	if req.CheckInterval <= 0 {
 		req.CheckInterval = 3
 	}
+	if req.Status == "" {
+		req.Status = "active"
+	}
+	if req.Status != "active" && req.Status != "inactive" {
+		respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+		return
+	}
 
 	result, err := h.db.Exec(
-		"INSERT INTO devices (name, type, ip, url, port, method, location, check_interval, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		req.Name, req.Type, req.IP, req.URL, req.Port, req.Method, req.Location, req.CheckInterval, req.Description,
+		"INSERT INTO devices (name, type, ip, url, port, method, location, check_interval, status, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		req.Name, req.Type, req.IP, req.URL, req.Port, req.Method, req.Location, req.CheckInterval, req.Status, req.Description,
 	)
 	if err != nil {
 		log.Printf("Error creating device: %v", err)
@@ -213,6 +232,7 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 		Method        string `json:"method"`
 		Location      string `json:"location"`
 		CheckInterval int    `json:"check_interval"`
+		Status        string `json:"status"`
 		Description   string `json:"description"`
 	}
 
@@ -226,6 +246,7 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 		Method:        req.Method,
 		Location:      req.Location,
 		CheckInterval: req.CheckInterval,
+		Status:        req.Status,
 		Description:   req.Description,
 	}
 
@@ -240,11 +261,11 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	var currentName, currentType, currentIP, currentURL, currentMethod, currentLocation, currentDescription string
+	var currentName, currentType, currentIP, currentURL, currentMethod, currentLocation, currentStatus, currentDescription string
 	var currentPort *int
 	var currentInterval int
-	err := h.db.QueryRow("SELECT name, type, ip, url, port, method, location, check_interval, description FROM devices WHERE id = ?", id).
-		Scan(&currentName, &currentType, &currentIP, &currentURL, &currentPort, &currentMethod, &currentLocation, &currentInterval, &currentDescription)
+	err := h.db.QueryRow("SELECT name, type, ip, url, port, method, location, check_interval, status, description FROM devices WHERE id = ?", id).
+		Scan(&currentName, &currentType, &currentIP, &currentURL, &currentPort, &currentMethod, &currentLocation, &currentInterval, &currentStatus, &currentDescription)
 	if err == sql.ErrNoRows {
 		respondError(w, http.StatusNotFound, "Device not found")
 		return
@@ -262,6 +283,7 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 	method := currentMethod
 	location := currentLocation
 	interval := currentInterval
+	status := currentStatus
 	desc := currentDescription
 
 	if req.Name != nil {
@@ -288,13 +310,20 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 	if req.CheckInterval != nil {
 		interval = *req.CheckInterval
 	}
+	if req.Status != nil {
+		if *req.Status != "active" && *req.Status != "inactive" {
+			respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+			return
+		}
+		status = *req.Status
+	}
 	if req.Description != nil {
 		desc = *req.Description
 	}
 
 	_, err = h.db.Exec(
-		"UPDATE devices SET name = ?, type = ?, ip = ?, url = ?, port = ?, method = ?, location = ?, check_interval = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		name, typ, ip, url, port, method, location, interval, desc, id,
+		"UPDATE devices SET name = ?, type = ?, ip = ?, url = ?, port = ?, method = ?, location = ?, check_interval = ?, status = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		name, typ, ip, url, port, method, location, interval, status, desc, id,
 	)
 	if err != nil {
 		log.Printf("Error updating device: %v", err)
@@ -312,6 +341,7 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 		Method        string `json:"method"`
 		Location      string `json:"location"`
 		CheckInterval int    `json:"check_interval"`
+		Status        string `json:"status"`
 		Description   string `json:"description"`
 	}
 
@@ -325,6 +355,7 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 		Method:        method,
 		Location:      location,
 		CheckInterval: interval,
+		Status:        status,
 		Description:   desc,
 	}
 
@@ -352,17 +383,22 @@ func (h *DeviceHandler) deleteDevice(w http.ResponseWriter, _ *http.Request, id 
 }
 
 func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, _ *http.Request, id int) {
-	var ip, method, url string
+	var ip, method, url, status string
 	var port *int
 	var interval int
-	err := h.db.QueryRow("SELECT ip, method, url, port, check_interval FROM devices WHERE id = ?", id).
-		Scan(&ip, &method, &url, &port, &interval)
+	err := h.db.QueryRow("SELECT ip, method, url, port, check_interval, status FROM devices WHERE id = ?", id).
+		Scan(&ip, &method, &url, &port, &interval, &status)
 	if err == sql.ErrNoRows {
 		respondError(w, http.StatusNotFound, "Device not found")
 		return
 	}
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		return
+	}
+
+	if status != "active" {
+		respondError(w, http.StatusBadRequest, "Device is inactive. Activate it first.")
 		return
 	}
 
@@ -386,4 +422,85 @@ func (h *DeviceHandler) stopMonitoring(w http.ResponseWriter, _ *http.Request, i
 	h.engine.Stop(id)
 	log.Printf("Monitoring stopped for device %d", id)
 	respondSuccess(w, "Monitoring stopped")
+}
+
+func (h *DeviceHandler) toggleStatus(w http.ResponseWriter, r *http.Request, id int) {
+	if r.Method != http.MethodPut {
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req ToggleStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Status != "active" && req.Status != "inactive" {
+		respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+		return
+	}
+
+	var currentStatus string
+	err := h.db.QueryRow("SELECT status FROM devices WHERE id = ?", id).Scan(&currentStatus)
+	if err == sql.ErrNoRows {
+		respondError(w, http.StatusNotFound, "Device not found")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		return
+	}
+
+	if currentStatus == req.Status {
+		respondError(w, http.StatusBadRequest, "Device is already "+req.Status)
+		return
+	}
+
+	_, err = h.db.Exec("UPDATE devices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", req.Status, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update device status")
+		return
+	}
+
+	if req.Status == "active" {
+		var ip, method, url string
+		var port *int
+		var interval int
+		h.db.QueryRow("SELECT ip, method, url, port, check_interval FROM devices WHERE id = ?", id).
+			Scan(&ip, &method, &url, &port, &interval)
+
+		config := monitor.DeviceConfig{
+			DeviceID: id,
+			IP:       ip,
+			URL:      url,
+			Method:   method,
+			Interval: interval,
+		}
+		if port != nil {
+			config.Port = *port
+		}
+		h.engine.Start(config)
+		log.Printf("Monitoring started for device %d (%s)", id, ip)
+	} else {
+		h.engine.Stop(id)
+		log.Printf("Monitoring stopped for device %d", id)
+	}
+
+	type StatusResponse struct {
+		ID      int    `json:"id"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	msg := "Device activated"
+	if req.Status == "inactive" {
+		msg = "Device deactivated"
+	}
+
+	respondData(w, StatusResponse{
+		ID:      id,
+		Status:  req.Status,
+		Message: msg,
+	})
 }

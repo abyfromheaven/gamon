@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"gamon/database"
 	"gamon/handler"
@@ -17,10 +19,10 @@ func main() {
 	}
 	defer db.Close()
 
-	hub := handler.NewHub()
+	hub := handler.NewHub(db)
 	go hub.Run()
 
-	engine := monitor.NewEngine(hub)
+	engine := monitor.NewEngine(hub, db)
 
 	deviceHandler := handler.NewDeviceHandler(db, engine, hub)
 	alertHandler := handler.NewAlertHandler(db)
@@ -45,13 +47,57 @@ func main() {
 
 	wrapped := corsMiddleware(mux)
 
+	go autoStartMonitoring(db, engine)
+
 	fmt.Println("===========================================")
-	fmt.Println("   GAMON - Garda Monitoring v0.3")
+	fmt.Println("   GAMON - Garda Monitoring v0.4")
 	fmt.Println("   Web Backend Server")
 	fmt.Println("   Running on http://localhost:8080")
 	fmt.Println("===========================================")
 
 	log.Fatal(http.ListenAndServe(":8080", wrapped))
+}
+
+func autoStartMonitoring(db *sql.DB, engine *monitor.Engine) {
+	time.Sleep(2 * time.Second)
+
+	rows, err := db.Query("SELECT id, ip, method, url, port, check_interval FROM devices WHERE status = 'active'")
+	if err != nil {
+		log.Printf("Failed to query devices for auto-start: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var id, interval int
+		var ip, method, url string
+		var port *int
+
+		if err := rows.Scan(&id, &ip, &method, &url, &port, &interval); err != nil {
+			log.Printf("Error scanning device for auto-start: %v", err)
+			continue
+		}
+
+		config := monitor.DeviceConfig{
+			DeviceID: id,
+			IP:       ip,
+			URL:      url,
+			Method:   method,
+			Interval: interval,
+		}
+		if port != nil {
+			config.Port = *port
+		}
+
+		engine.Start(config)
+		count++
+		log.Printf("Auto-started monitoring for device %d (%s)", id, ip)
+	}
+
+	if count > 0 {
+		log.Printf("Auto-started monitoring for %d active devices", count)
+	}
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
