@@ -1,0 +1,219 @@
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+
+const apiBaseURL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/$/, '');
+
+export type DeviceType = 'Server' | 'Router' | 'Switch' | 'Access Point' | 'Website';
+export type DeviceMethod = 'ICMP Ping' | 'HTTP Check' | 'TCP Port';
+export type DeviceStatus = 'active' | 'inactive';
+export type MonitorStatus = 'online' | 'offline' | 'warning' | 'unknown';
+export type AlertStatus = 'ongoing' | 'resolved';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Device {
+  id: number;
+  name: string;
+  type: DeviceType;
+  ip: string;
+  url: string;
+  port: number | null;
+  method: DeviceMethod;
+  location: string;
+  check_interval: number;
+  status: DeviceStatus;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DeviceInput {
+  name: string;
+  type: DeviceType;
+  ip: string;
+  url?: string;
+  port?: number | null;
+  method?: DeviceMethod;
+  location?: string;
+  check_interval?: number;
+  status?: DeviceStatus;
+  description?: string;
+}
+
+export type DeviceUpdate = Partial<DeviceInput>;
+
+export interface Alert {
+  id: number;
+  device_id: number;
+  device_name: string;
+  device_type: DeviceType;
+  device_ip?: string;
+  title: string;
+  status: AlertStatus;
+  severity: AlertSeverity;
+  started_at: string;
+  resolved_at: string | null;
+  description: string;
+}
+
+export interface AlertFilters {
+  status?: AlertStatus;
+  severity?: AlertSeverity;
+  device_type?: DeviceType;
+}
+
+export interface DashboardSummary {
+  total_devices: number;
+  online_devices: number;
+  offline_devices: number;
+  warning_devices: number;
+}
+
+export interface DashboardAlert {
+  id: number;
+  device_name: string;
+  title: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  started_at: string;
+}
+
+export interface Dashboard {
+  summary: DashboardSummary;
+  latest_alerts: DashboardAlert[];
+}
+
+export interface MonitoringRecord {
+  device_id: number;
+  device_name: string;
+  device_type: DeviceType;
+  ip: string;
+  method: DeviceMethod;
+  status: MonitorStatus;
+  latency_ms: number;
+  last_check: string | null;
+  interval: number;
+}
+
+export interface PingHistoryRecord {
+  id: number;
+  status: MonitorStatus;
+  latency_ms: number;
+  ttl: number;
+  seq: number;
+  details: string;
+  timestamp: string;
+}
+
+interface DataResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+interface MessageResponse {
+  success: boolean;
+  message: string;
+}
+
+export class APIError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+  }
+}
+
+function isMessageResponse(payload: unknown): payload is MessageResponse {
+  return typeof payload === 'object' && payload !== null && 'message' in payload;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, expectsData = true): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseURL}${path}`, {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        ...init.headers,
+      },
+    });
+  } catch {
+    throw new APIError('Tidak dapat terhubung ke backend Gamon.', 0);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new APIError('Backend Gamon mengirim respons yang bukan JSON.', response.status);
+  }
+
+  if (!response.ok || !isMessageResponse(payload) || !payload.success) {
+    const message = isMessageResponse(payload) ? payload.message : `Request gagal (${response.status}).`;
+    throw new APIError(message, response.status);
+  }
+
+  if (expectsData && !('data' in payload)) {
+    throw new APIError('Respons backend tidak memiliki data yang diharapkan.', response.status);
+  }
+
+  return ('data' in payload ? (payload as DataResponse<T>).data : undefined) as T;
+}
+
+function jsonRequest(method: 'POST' | 'PUT' | 'DELETE', body?: unknown): RequestInit {
+  return {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  };
+}
+
+export function fetchDevices(): Promise<Device[]> {
+  return request<Device[]>('/api/devices');
+}
+
+export function createDevice(device: DeviceInput): Promise<Device> {
+  return request<Device>('/api/devices', jsonRequest('POST', device));
+}
+
+export function updateDevice(id: number, device: DeviceUpdate): Promise<Device> {
+  return request<Device>(`/api/devices/${id}`, jsonRequest('PUT', device));
+}
+
+export function deleteDevice(id: number): Promise<void> {
+  return request<void>(`/api/devices/${id}`, jsonRequest('DELETE'), false);
+}
+
+export function startMonitor(id: number): Promise<void> {
+  return request<void>(`/api/devices/${id}/start`, jsonRequest('POST'), false);
+}
+
+export function stopMonitor(id: number): Promise<void> {
+  return request<void>(`/api/devices/${id}/stop`, jsonRequest('POST'), false);
+}
+
+export function fetchAlerts(filters: AlertFilters = {}): Promise<Alert[]> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined) query.set(key, value);
+  }
+
+  const suffix = query.size > 0 ? `?${query}` : '';
+  return request<Alert[]>(`/api/alerts${suffix}`);
+}
+
+export function resolveAlert(id: number): Promise<void> {
+  return request<void>(`/api/alerts/${id}/resolve`, jsonRequest('PUT'), false);
+}
+
+export function fetchDashboard(): Promise<Dashboard> {
+  return request<Dashboard>('/api/dashboard');
+}
+
+export function fetchMonitoring(): Promise<MonitoringRecord[]> {
+  return request<MonitoringRecord[]>('/api/monitoring');
+}
+
+export function fetchDeviceHistory(id: number): Promise<PingHistoryRecord[]> {
+  return request<PingHistoryRecord[]>(`/api/monitoring/${id}/history`);
+}

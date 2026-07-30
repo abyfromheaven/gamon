@@ -8,7 +8,7 @@ interface SidebarProps {
 interface NavItem {
   id: Page;
   label: string;
-  icon: JSX.Element;
+  icon: ReactNode;
   disabled?: boolean;
 }
 
@@ -87,3 +87,4 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
     </aside>
   );
 }
+import type { ReactNode } from 'react';

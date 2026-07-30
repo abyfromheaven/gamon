@@ -20,7 +20,7 @@ export const devices: Device[] = [
   { id: 5, name: 'DB Server-02', type: 'Server', ip: '192.168.1.12', method: 'ICMP Ping', port: 5432, location: 'Ruang Server Utama', status: 'inactive', lastSeen: '25 min ago' },
   { id: 6, name: 'Switch-Lantai1', type: 'Switch', ip: '192.168.2.1', method: 'ICMP Ping', port: null, location: 'Lantai 1 - Reception', status: 'active', lastSeen: '45 sec ago' },
   { id: 7, name: 'Switch-Lantai2', type: 'Switch', ip: '192.168.2.2', method: 'ICMP Ping', port: null, location: 'Lantai 2 - Ruang Rapat', status: 'active', lastSeen: '1 min ago' },
-  { id: 8, name: 'Switch-Lantai3', type: 'Switch', ip: '192.168.2.3', method: 'ICMP Ping', port: null, location: 'Lantai 3 - Kantor', status: 'warning', lastSeen: '3 min ago' },
+  { id: 8, name: 'Switch-Lantai3', type: 'Switch', ip: '192.168.2.3', method: 'ICMP Ping', port: null, location: 'Lantai 3 - Kantor', status: 'active', lastSeen: '3 min ago' },
   { id: 9, name: 'AP Lantai 1', type: 'Access Point', ip: '192.168.3.10', method: 'ICMP Ping', port: null, location: 'Lantai 1 - Lobby', status: 'active', lastSeen: '30 sec ago' },
   { id: 10, name: 'AP Lantai 2', type: 'Access Point', ip: '192.168.3.11', method: 'ICMP Ping', port: null, location: 'Lantai 2 - Ruang Rapat', status: 'active', lastSeen: '20 sec ago' },
   { id: 11, name: 'AP Lantai 3', type: 'Access Point', ip: '192.168.3.12', method: 'ICMP Ping', port: null, location: 'Lantai 3 - Kantor', status: 'inactive', lastSeen: '1 jam ago' },
