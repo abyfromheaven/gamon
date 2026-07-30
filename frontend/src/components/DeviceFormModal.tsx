@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import type { DeviceType } from '../types';
-import type { Device } from '../data/devices';
+import { useEffect, useState } from 'react';
+import type { Device, DeviceInput, DeviceType } from '../lib/api';
 
 interface DeviceFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (device: Omit<Device, 'id' | 'lastSeen'>) => void;
+  onSave: (device: DeviceInput) => Promise<void>;
   editDevice?: Device | null;
+  isSaving: boolean;
 }
 
 const deviceTypes: DeviceType[] = ['Server', 'Router', 'Switch', 'Access Point', 'Website'];
@@ -15,222 +15,53 @@ interface FormData {
   name: string;
   type: DeviceType;
   ip: string;
-  port: string;
   location: string;
+  description: string;
+  checkInterval: string;
   status: 'active' | 'inactive';
 }
 
-const initialFormData: FormData = {
-  name: '',
-  type: 'Server',
-  ip: '',
-  port: '',
-  location: '',
-  status: 'active',
-};
+const initialForm: FormData = { name: '', type: 'Server', ip: '', location: '', description: '', checkInterval: '3', status: 'active' };
 
-export function DeviceFormModal({ isOpen, onClose, onSave, editDevice }: DeviceFormModalProps) {
-  const [form, setForm] = useState<FormData>(initialFormData);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+export function DeviceFormModal({ isOpen, onClose, onSave, editDevice, isSaving }: DeviceFormModalProps) {
+  const [form, setForm] = useState<FormData>(initialForm);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (editDevice) {
-      setForm({
-        name: editDevice.name,
-        type: editDevice.type,
-        ip: editDevice.ip,
-        port: editDevice.port?.toString() ?? '',
-        location: editDevice.location,
-        status: editDevice.status,
-      });
-    } else {
-      setForm(initialFormData);
-    }
-    setErrors({});
+    setForm(editDevice ? {
+      name: editDevice.name, type: editDevice.type, ip: editDevice.ip, location: editDevice.location,
+      description: editDevice.description, checkInterval: String(editDevice.check_interval), status: editDevice.status,
+    } : initialForm);
+    setError('');
   }, [editDevice, isOpen]);
-
-  const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
-
-    if (!form.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!form.ip.trim()) {
-      newErrors.ip = 'IP address is required';
-    } else {
-      const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
-      if (!ipRegex.test(form.ip.trim()) && !domainRegex.test(form.ip.trim())) {
-        newErrors.ip = 'Invalid IP or domain format';
-      }
-    }
-
-    if (!form.location.trim()) {
-      newErrors.location = 'Location is required';
-    }
-
-    if (form.port && (isNaN(Number(form.port)) || Number(form.port) < 1 || Number(form.port) > 65535)) {
-      newErrors.port = 'Port must be 1-65535';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    onSave({
-      name: form.name.trim(),
-      type: form.type,
-      ip: form.ip.trim(),
-      method: 'ICMP Ping',
-      port: form.port ? Number(form.port) : null,
-      location: form.location.trim(),
-      status: form.status,
-    });
-  };
-
-  const updateField = (field: keyof FormData, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
 
   if (!isOpen) return null;
 
-  const inputBase = 'w-full px-3 py-2.5 bg-bg border rounded-lg text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent/50 transition-colors';
+  const update = (field: keyof FormData, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const interval = Number(form.checkInterval);
+    if (!form.name.trim() || !form.ip.trim()) return setError('Nama device dan alamat IP wajib diisi.');
+    if (!Number.isInteger(interval) || interval < 1) return setError('Interval harus berupa angka minimal 1 detik.');
+    setError('');
+    await onSave({ name: form.name.trim(), type: form.type, ip: form.ip.trim(), method: 'ICMP Ping', location: form.location.trim(), description: form.description.trim(), check_interval: interval, status: form.status });
+  };
+  const input = 'w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent/50';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-bg/60 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-
-      <div className="relative w-full max-w-lg bg-surface border border-border rounded-xl shadow-2xl animate-fade-in-scale">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <h2 className="text-lg font-semibold text-text-primary">
-            {editDevice ? 'Edit Device' : 'Add New Device'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">Device Name</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              placeholder="e.g. Core Router-01"
-              className={`${inputBase} ${errors.name ? 'border-danger' : 'border-border'}`}
-            />
-            {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Device Type</label>
-              <select
-                value={form.type}
-                onChange={(e) => updateField('type', e.target.value)}
-                className={`${inputBase} cursor-pointer`}
-              >
-                {deviceTypes.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => updateField('status', e.target.value)}
-                className={`${inputBase} cursor-pointer`}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">IP Address</label>
-            <input
-              type="text"
-              value={form.ip}
-              onChange={(e) => updateField('ip', e.target.value)}
-              placeholder="e.g. 192.168.1.1"
-              className={`${inputBase} font-mono ${errors.ip ? 'border-danger' : 'border-border'}`}
-            />
-            {errors.ip && <p className="mt-1 text-xs text-danger">{errors.ip}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Method</label>
-              <input
-                type="text"
-                value="ICMP Ping"
-                disabled
-                className={`${inputBase} font-mono text-text-muted border-border cursor-not-allowed opacity-60`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1.5">Port <span className="text-text-muted">(optional)</span></label>
-              <input
-                type="number"
-                value={form.port}
-                onChange={(e) => updateField('port', e.target.value)}
-                placeholder="e.g. 443"
-                min={1}
-                max={65535}
-                className={`${inputBase} font-mono ${errors.port ? 'border-danger' : 'border-border'}`}
-              />
-              {errors.port && <p className="mt-1 text-xs text-danger">{errors.port}</p>}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">Location / Ruangan</label>
-            <input
-              type="text"
-              value={form.location}
-              onChange={(e) => updateField('location', e.target.value)}
-              placeholder="e.g. Ruang Server Utama"
-              className={`${inputBase} ${errors.location ? 'border-danger' : 'border-border'}`}
-            />
-            {errors.location && <p className="mt-1 text-xs text-danger">{errors.location}</p>}
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
-            >
-              {editDevice ? 'Save Changes' : 'Add Device'}
-            </button>
-          </div>
-        </form>
+  return <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <button aria-label="Close" className="absolute inset-0 bg-bg/60 backdrop-blur-sm" onClick={onClose} />
+    <form onSubmit={submit} className="relative w-full max-w-lg bg-surface border border-border rounded-xl shadow-2xl p-6 space-y-4">
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{editDevice ? 'Edit Device' : 'Add New Device'}</h2><span className="text-xs text-text-muted">ICMP Ping</span></div>
+      {error && <p className="rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}
+      <label className="block text-xs text-text-secondary">Device Name<input className={input} value={form.name} onChange={(e) => update('name', e.target.value)} /></label>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="block text-xs text-text-secondary">Device Type<select className={input} value={form.type} onChange={(e) => update('type', e.target.value)}>{deviceTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+        <label className="block text-xs text-text-secondary">Status<select className={input} value={form.status} onChange={(e) => update('status', e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
       </div>
-    </div>
-  );
+      <label className="block text-xs text-text-secondary">IP Address<input className={`${input} font-mono`} value={form.ip} onChange={(e) => update('ip', e.target.value)} placeholder="192.168.1.1" /></label>
+      <div className="grid grid-cols-2 gap-4"><label className="block text-xs text-text-secondary">Check Interval (seconds)<input className={input} type="number" min="1" value={form.checkInterval} onChange={(e) => update('checkInterval', e.target.value)} /></label><label className="block text-xs text-text-secondary">Location (optional)<input className={input} value={form.location} onChange={(e) => update('location', e.target.value)} /></label></div>
+      <label className="block text-xs text-text-secondary">Description (optional)<textarea className={input} value={form.description} onChange={(e) => update('description', e.target.value)} rows={3} /></label>
+      <div className="flex justify-end gap-3"><button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 text-sm text-text-secondary">Cancel</button><button disabled={isSaving} className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{isSaving ? 'Saving...' : editDevice ? 'Save Changes' : 'Add Device'}</button></div>
+    </form>
+  </div>;
 }

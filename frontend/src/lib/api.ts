@@ -45,7 +45,8 @@ export interface Alert {
   device_id: number;
   device_name: string;
   device_type: DeviceType;
-  device_ip?: string;
+  device_ip: string;
+  method: DeviceMethod;
   title: string;
   status: AlertStatus;
   severity: AlertSeverity;

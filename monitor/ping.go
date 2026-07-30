@@ -16,25 +16,27 @@ const (
 	LatencyWarningThreshold = 200.0
 )
 
-type Result struct {
-	DeviceID  int     `json:"device_id"`
-	IP        string  `json:"ip"`
-	Method    string  `json:"method"`
-	Status    string  `json:"status"`
-	Latency   float64 `json:"latency"`
-	TTL       int     `json:"ttl"`
-	Seq       int     `json:"seq"`
-	Timestamp string  `json:"timestamp"`
+// CheckResult is the normalized result emitted by every monitoring method.
+type CheckResult struct {
+	DeviceID  int            `json:"device_id"`
+	IP        string         `json:"ip"`
+	Method    string         `json:"method"`
+	Status    string         `json:"status"`
+	LatencyMs float64        `json:"latency_ms"`
+	TTL       int            `json:"ttl"`
+	Seq       int            `json:"seq"`
+	Timestamp string         `json:"timestamp"`
+	Details   map[string]any `json:"details"`
 }
 
-func PingOnce(ip string, seq int) Result {
-	result := Result{
+// PingOnce executes one ICMP ping and normalizes its output into CheckResult.
+func PingOnce(ip string, seq int) CheckResult {
+	result := CheckResult{
 		IP:        ip,
 		Status:    StatusOffline,
-		Latency:   0,
-		TTL:       0,
 		Seq:       seq,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Details:   map[string]any{},
 	}
 
 	var cmd *exec.Cmd
@@ -45,37 +47,37 @@ func PingOnce(ip string, seq int) Result {
 	}
 
 	out, err := cmd.CombinedOutput()
-	raw := strings.TrimSpace(string(out))
-
 	if err != nil {
 		return result
 	}
 
-	for _, line := range strings.Split(raw, "\n") {
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.Contains(line, "icmp_seq=") {
 			continue
 		}
 
 		result.Status = StatusOnline
-
 		for _, field := range strings.Fields(line) {
-			if kv := strings.SplitN(field, "=", 2); len(kv) == 2 {
-				switch kv[0] {
-				case "ttl":
-					if v, err := strconv.Atoi(kv[1]); err == nil {
-						result.TTL = v
-					}
-				case "time":
-					if v, err := strconv.ParseFloat(kv[1], 64); err == nil {
-						result.Latency = v
-					}
+			kv := strings.SplitN(field, "=", 2)
+			if len(kv) != 2 {
+				continue
+			}
+			switch kv[0] {
+			case "ttl":
+				if value, err := strconv.Atoi(kv[1]); err == nil {
+					result.TTL = value
+					result.Details["ttl"] = value
+				}
+			case "time":
+				if value, err := strconv.ParseFloat(kv[1], 64); err == nil {
+					result.LatencyMs = value
 				}
 			}
 		}
 	}
 
-	if result.Status == StatusOnline && result.Latency >= LatencyWarningThreshold {
+	if result.Status == StatusOnline && result.LatencyMs >= LatencyWarningThreshold {
 		result.Status = StatusWarning
 	}
 

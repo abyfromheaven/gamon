@@ -49,7 +49,7 @@ func (h *AlertHandler) HandleAlert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
-	query := `SELECT a.id, a.device_id, d.name, d.type, a.title, a.status, a.severity, a.started_at, a.resolved_at, a.description
+	query := `SELECT a.id, a.device_id, d.name, d.type, d.ip, d.method, a.title, a.status, a.severity, a.started_at, a.resolved_at, a.description
 		FROM alerts a
 		JOIN devices d ON a.device_id = d.id
 		WHERE 1=1`
@@ -83,6 +83,8 @@ func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 		DeviceID    int     `json:"device_id"`
 		DeviceName  string  `json:"device_name"`
 		DeviceType  string  `json:"device_type"`
+		DeviceIP    string  `json:"device_ip"`
+		Method      string  `json:"method"`
 		Title       string  `json:"title"`
 		Status      string  `json:"status"`
 		Severity    string  `json:"severity"`
@@ -96,7 +98,7 @@ func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 		var a AlertResponse
 		var startedAt string
 		var resolvedAt *string
-		if err := rows.Scan(&a.ID, &a.DeviceID, &a.DeviceName, &a.DeviceType, &a.Title, &a.Status, &a.Severity, &startedAt, &resolvedAt, &a.Description); err != nil {
+		if err := rows.Scan(&a.ID, &a.DeviceID, &a.DeviceName, &a.DeviceType, &a.DeviceIP, &a.Method, &a.Title, &a.Status, &a.Severity, &startedAt, &resolvedAt, &a.Description); err != nil {
 			log.Printf("Error scanning alert: %v", err)
 			continue
 		}

@@ -221,6 +221,9 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, _ := result.LastInsertId()
+	if req.Status == "active" {
+		h.engine.Start(deviceConfig(int(id), req.IP, req.URL, req.Port, req.Method, req.CheckInterval))
+	}
 
 	type DeviceResponse struct {
 		ID            int    `json:"id"`
@@ -331,6 +334,12 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
+	// Restarting an active device applies changed IP, interval, and method immediately.
+	h.engine.Stop(id)
+	if status == "active" {
+		h.engine.Start(deviceConfig(id, ip, url, port, method, interval))
+	}
+
 	type DeviceResponse struct {
 		ID            int    `json:"id"`
 		Name          string `json:"name"`
@@ -382,7 +391,11 @@ func (h *DeviceHandler) deleteDevice(w http.ResponseWriter, _ *http.Request, id 
 	respondSuccess(w, "Device deleted successfully")
 }
 
-func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, _ *http.Request, id int) {
+func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, r *http.Request, id int) {
+	if r.Method != http.MethodPost {
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
 	var ip, method, url, status string
 	var port *int
 	var interval int
@@ -402,26 +415,27 @@ func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, _ *http.Request, 
 		return
 	}
 
-	config := monitor.DeviceConfig{
-		DeviceID: id,
-		IP:       ip,
-		URL:      url,
-		Method:   method,
-		Interval: interval,
-	}
-	if port != nil {
-		config.Port = *port
-	}
-
-	h.engine.Start(config)
+	h.engine.Start(deviceConfig(id, ip, url, port, method, interval))
 	log.Printf("Monitoring started for device %d (%s)", id, ip)
 	respondSuccess(w, "Monitoring started")
 }
 
-func (h *DeviceHandler) stopMonitoring(w http.ResponseWriter, _ *http.Request, id int) {
+func (h *DeviceHandler) stopMonitoring(w http.ResponseWriter, r *http.Request, id int) {
+	if r.Method != http.MethodPost {
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
 	h.engine.Stop(id)
 	log.Printf("Monitoring stopped for device %d", id)
 	respondSuccess(w, "Monitoring stopped")
+}
+
+func deviceConfig(id int, ip, url string, port *int, method string, interval int) monitor.DeviceConfig {
+	config := monitor.DeviceConfig{DeviceID: id, IP: ip, URL: url, Method: method, Interval: interval}
+	if port != nil {
+		config.Port = *port
+	}
+	return config
 }
 
 func (h *DeviceHandler) toggleStatus(w http.ResponseWriter, r *http.Request, id int) {

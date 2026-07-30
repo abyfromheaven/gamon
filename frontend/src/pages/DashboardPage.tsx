@@ -1,42 +1,17 @@
-import { dashboardData } from '../data/dummy';
-import { MetricsGrid } from '../components/MetricsGrid';
-import { DeviceSummary } from '../components/DeviceSummary';
-import { LatestAlerts } from '../components/LatestAlerts';
-import { SystemStatus } from '../components/SystemStatus';
-import { QuickActions } from '../components/QuickActions';
+import { useEffect, useMemo, useState } from 'react';
+import type { Dashboard, MonitoringRecord } from '../lib/api';
+import { fetchDashboard, fetchMonitoring } from '../lib/api';
+import { deviceBreakdown, presentAlert } from '../lib/presenters';
+import type { DashboardData, MonitorResult } from '../types';
+import type { Page } from '../components/Sidebar';
+import { MetricsGrid } from '../components/MetricsGrid'; import { DeviceSummary } from '../components/DeviceSummary'; import { LatestAlerts } from '../components/LatestAlerts'; import { SystemStatus } from '../components/SystemStatus'; import { QuickActions } from '../components/QuickActions';
 
-export function DashboardPage() {
-  const data = dashboardData;
-
-  return (
-    <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-6 lg:space-y-8">
-        {/* Metrics — 4 questions the dashboard answers */}
-        <MetricsGrid summary={data.summary} />
-
-        {/* Middle row: Device Summary + Latest Alerts */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5">
-          <div className="lg:col-span-2">
-            <DeviceSummary devices={data.deviceBreakdown} />
-          </div>
-          <div className="lg:col-span-3">
-            <LatestAlerts alerts={data.latestAlerts} onViewAll={() => {}} />
-          </div>
-        </div>
-
-        {/* Bottom row: System Status + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5">
-          <div className="lg:col-span-3">
-            <SystemStatus status={data.systemStatus} />
-          </div>
-          <div className="lg:col-span-2">
-            <QuickActions
-              onAddDevice={() => {}}
-              onViewMonitoring={() => {}}
-              onViewAlerts={() => {}}
-              onRefresh={() => {}}
-            />
-          </div>
-        </div>
-    </div>
-  );
+export function DashboardPage({ monitorResults, onNavigate, isConnected, reconnectKey }: { monitorResults: Map<number, MonitorResult>; onNavigate: (page: Page) => void; isConnected: boolean; reconnectKey: number }) {
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null); const [monitoring, setMonitoring] = useState<MonitoringRecord[]>([]); const [error, setError] = useState('');
+  const load = async () => { try { setError(''); const [nextDashboard, nextMonitoring] = await Promise.all([fetchDashboard(), fetchMonitoring()]); setDashboard(nextDashboard); setMonitoring(nextMonitoring); } catch (err) { setError(err instanceof Error ? err.message : 'Gagal memuat dashboard.'); } };
+  useEffect(() => { void load(); }, [reconnectKey]);
+  const liveMonitoring = useMemo(() => monitoring.map((record) => { const live = monitorResults.get(record.device_id); return live ? { ...record, status: live.status, latency_ms: live.latency_ms, last_check: live.timestamp } : record; }), [monitoring, monitorResults]);
+  const data: DashboardData | null = useMemo(() => dashboard && ({ summary: { totalDevices: liveMonitoring.length || dashboard.summary.total_devices, online: liveMonitoring.filter((item) => item.status === 'online').length, offline: liveMonitoring.filter((item) => item.status === 'offline').length, warnings: liveMonitoring.filter((item) => item.status === 'warning').length }, deviceBreakdown: deviceBreakdown(liveMonitoring), latestAlerts: dashboard.latest_alerts.map(presentAlert), systemStatus: { monitoring: isConnected ? 'Running' : 'Stopped', checkInterval: liveMonitoring.length ? `${Math.min(...liveMonitoring.map((item) => item.interval))} seconds` : '—', lastScan: liveMonitoring.find((item) => item.last_check)?.last_check ?? '—', notifications: 'Paused' } }), [dashboard, liveMonitoring, isConnected]);
+  if (!data) return <div className="p-8 text-text-muted">{error || 'Loading dashboard...'}</div>;
+  return <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-6 lg:space-y-8">{error && <p className="rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}<MetricsGrid summary={data.summary} /><div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5"><div className="lg:col-span-2"><DeviceSummary devices={data.deviceBreakdown} /></div><div className="lg:col-span-3"><LatestAlerts alerts={data.latestAlerts} onViewAll={() => onNavigate('alerts')} /></div></div><div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5"><div className="lg:col-span-3"><SystemStatus status={data.systemStatus} /></div><div className="lg:col-span-2"><QuickActions onAddDevice={() => onNavigate('devices')} onViewMonitoring={() => onNavigate('monitoring')} onViewAlerts={() => onNavigate('alerts')} onRefresh={() => void load()} /></div></div></div>;
 }

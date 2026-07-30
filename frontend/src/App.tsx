@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Sidebar, type Page } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { DashboardPage } from './pages/DashboardPage';
 import { DeviceManagementPage } from './pages/DeviceManagementPage';
 import { AlertCenterPage } from './pages/AlertCenterPage';
+import { MonitoringPage } from './pages/MonitoringPage';
 
 function App() {
-  const { isConnected } = useWebSocket();
+  const [reconnectKey, setReconnectKey] = useState(0);
+  const handleReconnect = useCallback(() => setReconnectKey((k) => k + 1), []);
+  const { isConnected, monitorResults, lastStatusChange } = useWebSocket(handleReconnect);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   return (
@@ -23,9 +26,10 @@ function App() {
         </div>
 
         <main className="flex-1 overflow-auto">
-          {currentPage === 'dashboard' && <DashboardPage />}
+          {currentPage === 'dashboard' && <DashboardPage monitorResults={monitorResults} onNavigate={setCurrentPage} isConnected={isConnected} reconnectKey={reconnectKey} />}
           {currentPage === 'devices' && <DeviceManagementPage />}
-          {currentPage === 'alerts' && <AlertCenterPage />}
+          {currentPage === 'monitoring' && <MonitoringPage monitorResults={monitorResults} onViewAlerts={() => setCurrentPage('alerts')} reconnectKey={reconnectKey} />}
+          {currentPage === 'alerts' && <AlertCenterPage lastStatusChange={lastStatusChange} />}
         </main>
       </div>
     </div>

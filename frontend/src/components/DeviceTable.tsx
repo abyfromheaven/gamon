@@ -1,4 +1,4 @@
-import type { Device } from '../data/devices';
+import type { Device } from '../lib/api';
 import { StatusBadge } from './StatusBadge';
 
 interface DeviceTableProps {

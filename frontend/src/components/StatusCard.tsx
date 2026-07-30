@@ -22,7 +22,7 @@ export function StatusCard({ result }: StatusCardProps) {
       <dl className="mt-5 grid grid-cols-3 gap-3 text-sm">
         <div>
           <dt className="text-text-muted">Latency</dt>
-          <dd className="mt-1 font-mono text-text-primary">{result.latency} ms</dd>
+          <dd className="mt-1 font-mono text-text-primary">{result.latency_ms} ms</dd>
         </div>
         <div>
           <dt className="text-text-muted">TTL</dt>

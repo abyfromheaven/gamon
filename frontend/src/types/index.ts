@@ -1,50 +1,35 @@
+import type {
+  AlertSeverity as APIAlertSeverity,
+  AlertStatus as APIAlertStatus,
+  DeviceType as APIDeviceType,
+  MonitorStatus,
+} from '../lib/api';
+
+export type DeviceType = APIDeviceType;
+export type AlertSeverity = APIAlertSeverity;
+export type AlertStatus = APIAlertStatus;
+
 export interface PingResult {
   ip: string;
-  status: 'online' | 'down';
-  latency: number;
+  status: MonitorStatus;
+  latency_ms: number;
   ttl: number;
   seq: number;
   timestamp: string;
 }
 
-export interface WSMessage {
-  type: 'ping_result' | 'status_change';
-  data: PingResult;
+export interface MonitorResult extends PingResult {
+  device_id: number;
+  method: string;
+  details: Record<string, unknown>;
 }
 
-export interface MonitorRequest {
-  ip: string;
-}
-
-export interface APIResponse {
-  success: boolean;
-  message: string;
-}
-
-export type DeviceType = 'Server' | 'Router' | 'Switch' | 'Access Point' | 'Website';
-
-export type DeviceMethod = 'ICMP Ping';
-
-export interface Device {
-  id: number;
-  name: string;
-  type: DeviceType;
-  ip: string;
-  method: DeviceMethod;
-  port: number | null;
-  location: string;
-  status: 'active' | 'inactive';
-  lastSeen: string | null;
-}
-
-export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
-
-export type AlertStatus = 'ongoing' | 'resolved';
-
-export interface DeviceBreakdown {
-  type: DeviceType;
-  count: number;
-  online: number;
+export interface StatusChange {
+  device_id: number;
+  device_name: string;
+  old_status: MonitorStatus | '';
+  new_status: MonitorStatus;
+  timestamp: string;
 }
 
 export interface Alert {
@@ -59,6 +44,12 @@ export interface Alert {
   description: string;
   monitoringMethod: string;
   timestamp: number;
+}
+
+export interface DeviceBreakdown {
+  type: DeviceType;
+  count: number;
+  online: number;
 }
 
 export interface SystemStatusInfo {

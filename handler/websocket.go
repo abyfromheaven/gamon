@@ -44,6 +44,7 @@ type DeviceStatus struct {
 	Name      string  `json:"name"`
 	Type      string  `json:"type"`
 	IP        string  `json:"ip"`
+	Method    string  `json:"method"`
 	Status    string  `json:"status"`
 	LatencyMs float64 `json:"latency_ms"`
 	LastCheck string  `json:"last_check"`
@@ -122,7 +123,7 @@ func (h *Hub) getAllDeviceStatuses() []DeviceStatus {
 	var statuses []DeviceStatus
 
 	rows, err := h.db.Query(`
-		SELECT d.id, d.name, d.type, d.ip,
+		SELECT d.id, d.name, d.type, d.ip, d.method,
 			COALESCE(ph.status, 'unknown') as last_status,
 			COALESCE(ph.latency_ms, 0) as last_latency,
 			COALESCE(ph.timestamp, d.created_at) as last_check
@@ -142,7 +143,7 @@ func (h *Hub) getAllDeviceStatuses() []DeviceStatus {
 	for rows.Next() {
 		var ds DeviceStatus
 		var lastCheck string
-		if err := rows.Scan(&ds.DeviceID, &ds.Name, &ds.Type, &ds.IP, &ds.Status, &ds.LatencyMs, &lastCheck); err != nil {
+		if err := rows.Scan(&ds.DeviceID, &ds.Name, &ds.Type, &ds.IP, &ds.Method, &ds.Status, &ds.LatencyMs, &lastCheck); err != nil {
 			log.Printf("Error scanning device status: %v", err)
 			continue
 		}
