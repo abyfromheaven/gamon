@@ -23,6 +23,7 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+	done chan struct{}
 }
 
 type Hub struct {
@@ -75,7 +76,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
+				close(client.done)
 			}
 			h.mu.Unlock()
 			log.Printf("Client disconnected. Total: %d", len(h.clients))
@@ -86,7 +87,7 @@ func (h *Hub) Run() {
 				select {
 				case client.send <- message:
 				default:
-					close(client.send)
+					close(client.done)
 					delete(h.clients, client)
 				}
 			}
@@ -112,10 +113,10 @@ func (h *Hub) sendInitialState(client *Client) {
 	}
 
 	select {
+	case <-client.done:
+		log.Printf("Client disconnected before initial state could be sent")
 	case client.send <- dataBytes:
 		log.Printf("Sent initial state to client (%d devices)", len(statuses))
-	default:
-		log.Printf("Failed to send initial state: client send buffer full")
 	}
 }
 
@@ -186,6 +187,7 @@ func HandleWebSocket(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		hub:  hub,
 		conn: conn,
 		send: make(chan []byte, 256),
+		done: make(chan struct{}),
 	}
 
 	hub.register <- client
@@ -221,9 +223,17 @@ func (c *Client) readPump() {
 func (c *Client) writePump() {
 	defer c.conn.Close()
 
-	for message := range c.send {
-		if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			break
+	for {
+		select {
+		case <-c.done:
+			return
+		case message, ok := <-c.send:
+			if !ok {
+				return
+			}
+			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
 		}
 	}
 }

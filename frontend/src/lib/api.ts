@@ -124,8 +124,8 @@ export class APIError extends Error {
   }
 }
 
-function isMessageResponse(payload: unknown): payload is MessageResponse {
-  return typeof payload === 'object' && payload !== null && 'message' in payload;
+function isSuccessResponse(payload: unknown): payload is { success: boolean } {
+  return typeof payload === 'object' && payload !== null && 'success' in payload;
 }
 
 async function request<T>(path: string, init: RequestInit = {}, expectsData = true): Promise<T> {
@@ -149,8 +149,8 @@ async function request<T>(path: string, init: RequestInit = {}, expectsData = tr
     throw new APIError('Backend Gamon mengirim respons yang bukan JSON.', response.status);
   }
 
-  if (!response.ok || !isMessageResponse(payload) || !payload.success) {
-    const message = isMessageResponse(payload) ? payload.message : `Request gagal (${response.status}).`;
+  if (!response.ok || !isSuccessResponse(payload) || !payload.success) {
+    const message = 'message' in (payload as object) && typeof (payload as MessageResponse).message === 'string' ? (payload as MessageResponse).message : `Request gagal (${response.status}).`;
     throw new APIError(message, response.status);
   }
 
