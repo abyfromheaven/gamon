@@ -4,13 +4,13 @@ interface StatusBadgeProps {
 
 const statusConfig = {
   active: {
-    label: 'Active',
+    label: 'Aktif',
     dot: 'bg-success animate-breathe',
     text: 'text-success',
     bg: 'bg-success-muted',
   },
   inactive: {
-    label: 'Inactive',
+    label: 'Nonaktif',
     dot: 'bg-text-muted',
     text: 'text-text-muted',
     bg: 'bg-bg/50',

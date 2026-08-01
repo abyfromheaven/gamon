@@ -5,9 +5,10 @@ interface DeviceTableProps {
   devices: Device[];
   onEdit: (device: Device) => void;
   onDelete: (device: Device) => void;
+  onToggle: (device: Device) => void;
 }
 
-export function DeviceTable({ devices, onEdit, onDelete }: DeviceTableProps) {
+export function DeviceTable({ devices, onEdit, onDelete, onToggle }: DeviceTableProps) {
   if (devices.length === 0) {
     return (
       <div className="animate-fade-in bg-surface border border-border rounded-xl p-12 text-center">
@@ -69,6 +70,15 @@ export function DeviceTable({ devices, onEdit, onDelete }: DeviceTableProps) {
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-end gap-1">
                     <button
+                      onClick={() => onToggle(device)}
+                      className={`p-1.5 rounded-md transition-colors duration-150 cursor-pointer ${device.status === 'active' ? 'text-success hover:bg-success-muted' : 'text-text-muted hover:bg-surface-elevated'}`}
+                      title={device.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => onEdit(device)}
                       className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent-muted transition-colors duration-150 cursor-pointer"
                       title="Edit device"
@@ -104,6 +114,15 @@ export function DeviceTable({ devices, onEdit, onDelete }: DeviceTableProps) {
                 <span className="text-sm font-medium text-text-primary">{device.name}</span>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onToggle(device)}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${device.status === 'active' ? 'text-success hover:bg-success-muted' : 'text-text-muted hover:bg-surface-elevated'}`}
+                  title={device.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
+                  </svg>
+                </button>
                 <button
                   onClick={() => onEdit(device)}
                   className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent-muted transition-colors cursor-pointer"

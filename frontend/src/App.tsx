@@ -6,12 +6,17 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DeviceManagementPage } from './pages/DeviceManagementPage';
 import { AlertCenterPage } from './pages/AlertCenterPage';
 import { MonitoringPage } from './pages/MonitoringPage';
+import { AlertBannerContainer } from './components/AlertBannerContainer';
 
 function App() {
   const [reconnectKey, setReconnectKey] = useState(0);
   const handleReconnect = useCallback(() => setReconnectKey((k) => k + 1), []);
   const { isConnected, monitorResults, lastStatusChange } = useWebSocket(handleReconnect);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+
+  const navigateToMonitoring = useCallback((_deviceId: number) => {
+    setCurrentPage('monitoring');
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg flex">
@@ -32,6 +37,8 @@ function App() {
           {currentPage === 'alerts' && <AlertCenterPage lastStatusChange={lastStatusChange} />}
         </main>
       </div>
+
+      <AlertBannerContainer statusChange={lastStatusChange} onNavigateToMonitoring={navigateToMonitoring} />
     </div>
   );
 }

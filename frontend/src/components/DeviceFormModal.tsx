@@ -18,10 +18,9 @@ interface FormData {
   location: string;
   description: string;
   checkInterval: string;
-  status: 'active' | 'inactive';
 }
 
-const initialForm: FormData = { name: '', type: 'Server', ip: '', location: '', description: '', checkInterval: '3', status: 'active' };
+const initialForm: FormData = { name: '', type: 'Server', ip: '', location: '', description: '', checkInterval: '3' };
 
 export function DeviceFormModal({ isOpen, onClose, onSave, editDevice, isSaving }: DeviceFormModalProps) {
   const [form, setForm] = useState<FormData>(initialForm);
@@ -30,7 +29,7 @@ export function DeviceFormModal({ isOpen, onClose, onSave, editDevice, isSaving 
   useEffect(() => {
     setForm(editDevice ? {
       name: editDevice.name, type: editDevice.type, ip: editDevice.ip, location: editDevice.location,
-      description: editDevice.description, checkInterval: String(editDevice.check_interval), status: editDevice.status,
+      description: editDevice.description, checkInterval: String(editDevice.check_interval),
     } : initialForm);
     setError('');
   }, [editDevice, isOpen]);
@@ -44,7 +43,7 @@ export function DeviceFormModal({ isOpen, onClose, onSave, editDevice, isSaving 
     if (!form.name.trim() || !form.ip.trim()) return setError('Nama device dan alamat IP wajib diisi.');
     if (!Number.isInteger(interval) || interval < 1) return setError('Interval harus berupa angka minimal 1 detik.');
     setError('');
-    await onSave({ name: form.name.trim(), type: form.type, ip: form.ip.trim(), method: 'ICMP Ping', location: form.location.trim(), description: form.description.trim(), check_interval: interval, status: form.status });
+    await onSave({ name: form.name.trim(), type: form.type, ip: form.ip.trim(), method: 'ICMP Ping', location: form.location.trim(), description: form.description.trim(), check_interval: interval });
   };
   const input = 'w-full px-3 py-2.5 bg-bg border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent/50';
 
@@ -54,10 +53,7 @@ export function DeviceFormModal({ isOpen, onClose, onSave, editDevice, isSaving 
       <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{editDevice ? 'Edit Device' : 'Add New Device'}</h2><span className="text-xs text-text-muted">ICMP Ping</span></div>
       {error && <p className="rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}
       <label className="block text-xs text-text-secondary">Device Name<input className={input} value={form.name} onChange={(e) => update('name', e.target.value)} /></label>
-      <div className="grid grid-cols-2 gap-4">
-        <label className="block text-xs text-text-secondary">Device Type<select className={input} value={form.type} onChange={(e) => update('type', e.target.value)}>{deviceTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-        <label className="block text-xs text-text-secondary">Status<select className={input} value={form.status} onChange={(e) => update('status', e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-      </div>
+      <label className="block text-xs text-text-secondary">Device Type<select className={input} value={form.type} onChange={(e) => update('type', e.target.value)}>{deviceTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
       <label className="block text-xs text-text-secondary">IP Address<input className={`${input} font-mono`} value={form.ip} onChange={(e) => update('ip', e.target.value)} placeholder="192.168.1.1" /></label>
       <div className="grid grid-cols-2 gap-4"><label className="block text-xs text-text-secondary">Check Interval (seconds)<input className={input} type="number" min="1" value={form.checkInterval} onChange={(e) => update('checkInterval', e.target.value)} /></label><label className="block text-xs text-text-secondary">Location (optional)<input className={input} value={form.location} onChange={(e) => update('location', e.target.value)} /></label></div>
       <label className="block text-xs text-text-secondary">Description (optional)<textarea className={input} value={form.description} onChange={(e) => update('description', e.target.value)} rows={3} /></label>

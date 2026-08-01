@@ -193,6 +193,10 @@ export function stopMonitor(id: number): Promise<void> {
   return request<void>(`/api/devices/${id}/stop`, jsonRequest('POST'), false);
 }
 
+export function toggleDeviceStatus(id: number, status: DeviceStatus): Promise<{ id: number; status: DeviceStatus; message: string }> {
+  return request<{ id: number; status: DeviceStatus; message: string }>(`/api/devices/${id}/status`, jsonRequest('PUT', { status }));
+}
+
 export function fetchAlerts(filters: AlertFilters = {}): Promise<Alert[]> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
