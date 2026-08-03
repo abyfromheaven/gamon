@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Device, MonitoringRecord, PingHistoryRecord } from '../lib/api';
 import { fetchDeviceHistory, fetchDevices, fetchMonitoring } from '../lib/api';
 import type { MonitorResult } from '../types';
@@ -15,6 +15,7 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
   const [statusFilter, setStatusFilter] = useState<'all' | MonitoringRecord['status']>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | Device['type']>('all');
   const [error, setError] = useState('');
+  const historyCache = useRef<Map<number, PingHistoryRecord[]>>(new Map());
 
   useEffect(() => {
     void Promise.all([fetchDevices(), fetchMonitoring()])
@@ -39,17 +40,46 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
 
   const choose = async (record: MonitoringRecord) => {
     setSelected(record);
+    const cached = historyCache.current.get(record.device_id);
+    if (cached) {
+      setHistory(cached);
+      return;
+    }
     try {
       const data = await fetchDeviceHistory(record.device_id);
-      setHistory(data.slice(0, 20));
+      const sliced = data.slice(0, 50);
+      historyCache.current.set(record.device_id, sliced);
+      setHistory(sliced);
     } catch {
       setHistory([]);
     }
   };
 
+  useEffect(() => {
+    if (!selected) return;
+    const deviceId = selected.device_id;
+    const liveResult = monitorResults.get(deviceId);
+    if (!liveResult) return;
+
+    const newRecord: PingHistoryRecord = {
+      id: Date.now(),
+      status: liveResult.status,
+      latency_ms: liveResult.latency_ms,
+      ttl: liveResult.ttl,
+      seq: liveResult.seq,
+      details: JSON.stringify(liveResult.details),
+      timestamp: liveResult.timestamp,
+    };
+
+    const cached = historyCache.current.get(deviceId) || [];
+    const updated = [...cached, newRecord].slice(-50);
+    historyCache.current.set(deviceId, updated);
+    setHistory(updated);
+  }, [monitorResults, selected?.device_id]);
+
   const chartData = useMemo(
     () => history
-      .slice(0, 20)
+      .slice(-50)
       .reverse()
       .map((item) => {
         const date = new Date(item.timestamp);
@@ -191,7 +221,7 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
 
               {/* Latency Chart */}
               <div className="pt-3 border-t border-border/50">
-                <p className="text-xs text-text-muted mb-3">Latency History (20 data terakhir)</p>
+                <p className="text-xs text-text-muted mb-3">Latency History (50 data terakhir)</p>
                 <LatencyChart data={chartData} />
               </div>
             </>

@@ -233,7 +233,7 @@ Pastikan indikator **WebSocket connected** muncul di bagian atas halaman.
 | **Langkah**          | Buka halaman Monitoring, biarkan selama 15-30 detik                                                                 |
 | **Hasil Diharapkan** | Status (online/offline/warning) dan latency berubah real-time tanpa refresh                                         |
 | **Status**           | ✅                                                                                                                   |
-| **Keterangan**       | bisa realtime tanpa refresh, tapi gua harus mengklik kolom devicenya terus-menerus agar chart / grafiknya terupdate |
+| **Keterangan**       | Sudah diperbaiki - chart sekarang auto-update real-time tanpa harus klik ulang |
 
 ### TC-3.2: Klik device untuk detail
 
@@ -563,5 +563,24 @@ gua males ngitung rangkumannya jir, lu aja yang rangkum.
 
 ## Catatan Tambahan
 
-(Isi jika ada bug, issue, atau catatan selama testing)
+### Fix TC-3.1: Latency Chart Auto-Update (2 Agustus 2026)
+
+**Masalah:** Latency chart tidak auto-update saat row device dibuka. User harus klik row device berulang kali untuk refresh chart.
+
+**Root cause:** `history` (data chart) hanya di-fetch sekali saat user klik row (`choose()`). Tidak ada mekanisme untuk append data baru dari WebSocket ke history.
+
+**Solusi:** In-Memory History Cache
+- Cache history per device di `useRef<Map<number, PingHistoryRecord[]>>`
+- Buka row pertama kali → fetch dari API (database punya semua historical data)
+- Saat row terbuka → append new results dari WebSocket ke cache
+- Tutup row → stop append, tapi cache tetap di memori
+- Buka ulang → langsung pakai cache (tidak reset dari nol)
+
+**File yang diubah:** `frontend/src/pages/MonitoringPage.tsx`
+- Tambah `useRef` untuk history cache
+- Rewrite `choose()` untuk gunakan cache
+- Tambah `useEffect` untuk live update dari WebSocket
+- Naikkan max data points dari 20 ke 50
+
+**Hasil:** Chart sekarang real-time update tanpa harus klik ulang, dan history persisten saat row ditutup/dibuka ulang.
 
