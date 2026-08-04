@@ -29,7 +29,7 @@ func main() {
 
 	if notifier.IsEnabled() {
 		log.Println("Telegram notification: enabled")
-		poller := notification.NewTelegramPoller(os.Getenv("TELEGRAM_BOT_TOKEN"), telegramHandler.CompletePairing)
+		poller := notification.NewTelegramPoller(os.Getenv("TELEGRAM_BOT_TOKEN"), telegramHandler.CompletePairing, telegramHandler.IsChatIDActive)
 		go poller.Start()
 	} else {
 		log.Println("Telegram notification: disabled (set TELEGRAM_BOT_TOKEN to enable)")

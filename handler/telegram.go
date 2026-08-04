@@ -193,6 +193,12 @@ func (h *TelegramHandler) IsActive() bool {
 	return count > 0
 }
 
+func (h *TelegramHandler) IsChatIDActive(chatID string) bool {
+	var count int
+	h.db.QueryRow("SELECT COUNT(*) FROM telegram_pairing WHERE status = 'connected' AND chat_id = ?", chatID).Scan(&count)
+	return count > 0
+}
+
 func generateToken() (string, error) {
 	b := make([]byte, 6)
 	if _, err := rand.Read(b); err != nil {

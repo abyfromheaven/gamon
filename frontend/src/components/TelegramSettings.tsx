@@ -183,7 +183,7 @@ export function TelegramSettings() {
           <div className="bg-bg/50 border border-border/30 rounded-lg p-4 space-y-3">
             <p className="text-sm font-semibold text-text-primary">Cara Pairing:</p>
             <ol className="space-y-2 text-sm text-text-secondary list-decimal list-inside">
-              <li>Buka Bot Telegram GAMON</li>
+              <li>Buka Bot Telegram @GardaMonitoringBot</li>
               <li>Kirim perintah: <code className="px-1.5 py-0.5 bg-surface-elevated rounded text-accent font-mono text-xs">/pair {token}</code></li>
               <li>Tunggu konfirmasi dari bot</li>
             </ol>

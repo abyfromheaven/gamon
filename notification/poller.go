@@ -12,11 +12,12 @@ import (
 )
 
 type TelegramPoller struct {
-	botToken  string
-	client    *http.Client
-	pairFunc  func(token, chatID string) error
-	offset    int
-	chatIDMap map[int64]string // chatID -> pairing status
+	botToken   string
+	client     *http.Client
+	pairFunc   func(token, chatID string) error
+	statusFunc func(chatID string) bool
+	offset     int
+	chatIDMap  map[int64]string // chatID -> pairing status
 }
 
 type telegramUpdate struct {
@@ -38,12 +39,13 @@ type telegramResponse struct {
 	Result []telegramUpdate  `json:"result"`
 }
 
-func NewTelegramPoller(botToken string, pairFunc func(token, chatID string) error) *TelegramPoller {
+func NewTelegramPoller(botToken string, pairFunc func(token, chatID string) error, statusFunc func(chatID string) bool) *TelegramPoller {
 	return &TelegramPoller{
-		botToken: botToken,
-		client:   &http.Client{Timeout: 10 * time.Second},
-		pairFunc: pairFunc,
-		chatIDMap: make(map[int64]string),
+		botToken:   botToken,
+		client:     &http.Client{Timeout: 10 * time.Second},
+		pairFunc:   pairFunc,
+		statusFunc: statusFunc,
+		chatIDMap:  make(map[int64]string),
 	}
 }
 
@@ -147,7 +149,12 @@ func (p *TelegramPoller) handlePair(text string, chatID int64, fromName string) 
 }
 
 func (p *TelegramPoller) handleStatus(chatID int64) {
-	p.sendMessage(chatID, "📊 Status: Connected ✅\n\nTelegram kamu aktif dan akan menerima notifikasi dari GAMON.")
+	chatIDStr := fmt.Sprintf("%d", chatID)
+	if p.statusFunc != nil && p.statusFunc(chatIDStr) {
+		p.sendMessage(chatID, "📊 Status: Connected ✅\n\nTelegram kamu aktif dan akan menerima notifikasi dari GAMON.")
+	} else {
+		p.sendMessage(chatID, "📊 Status: Not Connected ❌\n\nTelegram belum terhubung. Gunakan /pair GMN-XXXX-XXXX untuk menghubungkan.")
+	}
 }
 
 func (p *TelegramPoller) handleUnpair(chatID int64, fromName string) {
