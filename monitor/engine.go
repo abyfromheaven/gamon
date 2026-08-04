@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-const offlineFailureThreshold = 3
+const (
+	offlineFailureThreshold = 3
+)
 
 type HubInterface interface {
 	Broadcast(msgType string, data interface{})
@@ -42,6 +44,8 @@ type StatusChange struct {
 	Timestamp  string `json:"timestamp"`
 }
 
+// AlertEvent dihapus — tidak diperlukan untuk sistem sederhana
+
 type CheckFunc func(DeviceConfig, int) CheckResult
 
 type EngineOption func(*Engine)
@@ -58,18 +62,14 @@ type Engine struct {
 	hub HubInterface
 	db  *sql.DB
 
-	mu         sync.Mutex
-	targets    map[int]context.CancelFunc
-	lastStatus map[int]string
-	failures   map[int]int
-	check      CheckFunc
+	mu            sync.Mutex
+	targets       map[int]context.CancelFunc
+	lastStatus    map[int]string
+	failures      map[int]int
+	check         CheckFunc
 }
 
-type alertSpec struct {
-	title       string
-	severity    string
-	description string
-}
+// alertSpec dihapus — tidak diperlukan untuk sistem sederhana
 
 func NewEngine(hub HubInterface, db *sql.DB, options ...EngineOption) *Engine {
 	engine := &Engine{
@@ -158,13 +158,15 @@ func (e *Engine) runCheck(config DeviceConfig, seq int) {
 	}
 
 	e.saveCheckResult(result)
-	if change, alert, resolveAlert := e.trackStatus(result); change != nil {
-		if alert != nil {
-			e.createAlert(result.DeviceID, alert.title, alert.severity, alert.description)
-		}
-		if resolveAlert {
-			e.resolveAlerts(result.DeviceID)
-		}
+	change, shouldResolve, shouldAlert := e.trackStatus(result)
+
+	if shouldResolve {
+		e.resolveAlerts(result.DeviceID)
+	}
+	if shouldAlert {
+		e.createAlert(result.DeviceID)
+	}
+	if change != nil {
 		e.hub.Broadcast("status_change", *change)
 	}
 	e.hub.Broadcast("check_result", result)
@@ -182,59 +184,55 @@ func (e *Engine) saveCheckResult(result CheckResult) {
 	}
 }
 
-func (e *Engine) trackStatus(result CheckResult) (*StatusChange, *alertSpec, bool) {
+func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
 	e.mu.Lock()
 	oldStatus := e.lastStatus[result.DeviceID]
 	newStatus := oldStatus
-	var alert *alertSpec
 	resolveAlert := false
+	createAlert := false
 
 	switch result.Status {
 	case StatusOffline:
 		e.failures[result.DeviceID]++
 		if e.failures[result.DeviceID] >= offlineFailureThreshold && oldStatus != StatusOffline {
 			newStatus = StatusOffline
-			alert = &alertSpec{title: "Device Offline", severity: "critical", description: "Device tidak merespons ping dari " + result.IP}
+			createAlert = true
 		}
 	case StatusWarning:
 		e.failures[result.DeviceID] = 0
 		newStatus = StatusWarning
-		if oldStatus == StatusOffline {
-			resolveAlert = true
-		}
-		if oldStatus == StatusOnline {
-			alert = &alertSpec{title: "Device High Latency", severity: "medium", description: "Latency perangkat melebihi 200ms"}
-		}
 	case StatusOnline:
 		e.failures[result.DeviceID] = 0
 		newStatus = StatusOnline
-		if oldStatus == StatusOffline || oldStatus == StatusWarning {
+		if oldStatus == StatusOffline {
 			resolveAlert = true
 		}
 	default:
 		e.mu.Unlock()
-		return nil, nil, false
+		return nil, false, false
 	}
 
 	if newStatus == oldStatus {
 		e.mu.Unlock()
-		return nil, nil, false
+		return nil, false, false
 	}
-	e.lastStatus[result.DeviceID] = newStatus
-	e.mu.Unlock()
 
-	return &StatusChange{
+	change := &StatusChange{
 		DeviceID:   result.DeviceID,
 		DeviceName: e.getDeviceName(result.DeviceID),
 		OldStatus:  oldStatus,
 		NewStatus:  newStatus,
 		Timestamp:  result.Timestamp,
-	}, alert, resolveAlert
+	}
+	e.lastStatus[result.DeviceID] = newStatus
+	e.mu.Unlock()
+
+	return change, resolveAlert, createAlert
 }
 
-func (e *Engine) createAlert(deviceID int, title, severity, description string) {
+func (e *Engine) createAlert(deviceID int) {
 	_, err := e.db.Exec(`INSERT INTO alerts (device_id, title, status, severity, description)
-		VALUES (?, ?, 'ongoing', ?, ?)`, deviceID, title, severity, description)
+		VALUES (?, 'Device Offline', 'ongoing', 'critical', 'Device tidak merespons ping')`, deviceID)
 	if err != nil {
 		log.Printf("create alert for device %d: %v", deviceID, err)
 	}

@@ -20,9 +20,6 @@ const statusOptions: { value: AlertStatus | 'all'; label: string }[] = [
 const severityOptions: { value: AlertSeverity | 'all'; label: string }[] = [
   { value: 'all', label: 'All Severity' },
   { value: 'critical', label: 'Critical' },
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
 ];
 
 const deviceTypeOptions: { value: DeviceType | 'all'; label: string }[] = [

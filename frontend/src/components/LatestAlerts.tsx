@@ -26,6 +26,11 @@ const severityStyles: Record<AlertSeverity, { dot: string; text: string; bg: str
     text: 'text-success',
     bg: 'bg-success-muted',
   },
+  info: {
+    dot: 'bg-accent',
+    text: 'text-accent',
+    bg: 'bg-accent-muted',
+  },
 };
 
 const severityLabels: Record<AlertSeverity, string> = {
@@ -33,6 +38,7 @@ const severityLabels: Record<AlertSeverity, string> = {
   high: 'HIGH',
   medium: 'MED',
   low: 'LOW',
+  info: 'INFO',
 };
 
 export function LatestAlerts({ alerts, onViewAll }: LatestAlertsProps) {

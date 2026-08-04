@@ -43,6 +43,8 @@ export interface Alert {
   resolvedTime: string | null;
   description: string;
   monitoringMethod: string;
+  acknowledged: boolean;
+  acknowledgedAt: string | null;
   timestamp: number;
 }
 

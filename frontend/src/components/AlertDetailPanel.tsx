@@ -5,9 +5,10 @@ interface AlertDetailPanelProps {
   alert: Alert | null;
   onClose: () => void;
   onMarkResolved: (id: number) => void;
+  onAcknowledge: (id: number) => void;
 }
 
-export function AlertDetailPanel({ alert, onClose, onMarkResolved }: AlertDetailPanelProps) {
+export function AlertDetailPanel({ alert, onClose, onMarkResolved, onAcknowledge }: AlertDetailPanelProps) {
   if (!alert) return null;
 
   return (
@@ -62,6 +63,11 @@ export function AlertDetailPanel({ alert, onClose, onMarkResolved }: AlertDetail
               value={alert.resolvedTime ?? '—'}
               valueClass={alert.resolvedTime ? 'text-success' : 'text-text-muted'}
             />
+            <InfoRow
+              label="Acknowledged"
+              value={alert.acknowledged ? `Yes — ${alert.acknowledgedAt ?? ''}` : 'No'}
+              valueClass={alert.acknowledged ? 'text-accent' : 'text-text-muted'}
+            />
           </div>
 
           {/* Description */}
@@ -73,9 +79,17 @@ export function AlertDetailPanel({ alert, onClose, onMarkResolved }: AlertDetail
           </div>
         </div>
 
-        {/* Footer Action */}
+        {/* Footer Actions */}
         {alert.status === 'ongoing' && (
-          <div className="px-5 py-4 border-t border-border/50">
+          <div className="px-5 py-4 border-t border-border/50 space-y-2">
+            {!alert.acknowledged && (
+              <button
+                onClick={() => onAcknowledge(alert.id)}
+                className="w-full px-4 py-2.5 bg-accent/10 border border-accent/30 text-accent text-sm font-medium rounded-lg hover:bg-accent/20 transition-colors cursor-pointer"
+              >
+                Acknowledge
+              </button>
+            )}
             <button
               onClick={() => onMarkResolved(alert.id)}
               className="w-full px-4 py-2.5 bg-success/10 border border-success/30 text-success text-sm font-medium rounded-lg hover:bg-success/20 transition-colors cursor-pointer"

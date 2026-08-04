@@ -30,6 +30,12 @@ const severityConfig: Record<AlertSeverity, { label: string; text: string; bg: s
     bg: 'bg-success-muted',
     dot: 'bg-success',
   },
+  info: {
+    label: 'INFO',
+    text: 'text-accent',
+    bg: 'bg-accent-muted',
+    dot: 'bg-accent',
+  },
 };
 
 export function SeverityBadge({ severity, size = 'sm' }: SeverityBadgeProps) {

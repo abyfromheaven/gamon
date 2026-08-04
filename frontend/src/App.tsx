@@ -11,7 +11,7 @@ import { AlertBannerContainer } from './components/AlertBannerContainer';
 function App() {
   const [reconnectKey, setReconnectKey] = useState(0);
   const handleReconnect = useCallback(() => setReconnectKey((k) => k + 1), []);
-  const { isConnected, monitorResults, lastStatusChange } = useWebSocket(handleReconnect);
+  const { isConnected, monitorResults, lastStatusChange, alertCount, setAlertCount } = useWebSocket(handleReconnect);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   const navigateToMonitoring = useCallback((_deviceId: number) => {
@@ -20,7 +20,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <Sidebar activePage={currentPage} onNavigate={setCurrentPage} />
+      <Sidebar activePage={currentPage} onNavigate={setCurrentPage} alertCount={alertCount} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <div className="lg:hidden">
@@ -34,7 +34,7 @@ function App() {
           {currentPage === 'dashboard' && <DashboardPage monitorResults={monitorResults} onNavigate={setCurrentPage} isConnected={isConnected} reconnectKey={reconnectKey} />}
           {currentPage === 'devices' && <DeviceManagementPage />}
           {currentPage === 'monitoring' && <MonitoringPage monitorResults={monitorResults} onViewAlerts={() => setCurrentPage('alerts')} reconnectKey={reconnectKey} />}
-          {currentPage === 'alerts' && <AlertCenterPage lastStatusChange={lastStatusChange} />}
+          {currentPage === 'alerts' && <AlertCenterPage lastStatusChange={lastStatusChange} setAlertCount={setAlertCount} />}
         </main>
       </div>
 

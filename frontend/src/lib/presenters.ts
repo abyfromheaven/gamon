@@ -16,6 +16,8 @@ export function presentAlert(alert: APIAlert | DashboardAlert): Alert {
   const method = 'method' in alert ? alert.method : 'ICMP Ping';
   const description = 'description' in alert ? alert.description : '';
   const deviceType = 'device_type' in alert ? alert.device_type : 'Server';
+  const acknowledged = 'acknowledged' in alert ? alert.acknowledged : false;
+  const acknowledgedAt = 'acknowledged_at' in alert ? alert.acknowledged_at : null;
   return {
     id: alert.id,
     title: alert.title,
@@ -27,6 +29,8 @@ export function presentAlert(alert: APIAlert | DashboardAlert): Alert {
     resolvedTime: formatDateTime(resolvedAt),
     description,
     monitoringMethod: method,
+    acknowledged,
+    acknowledgedAt: formatDateTime(acknowledgedAt),
     timestamp: new Date(alert.started_at).valueOf(),
   };
 }

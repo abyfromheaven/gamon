@@ -91,5 +91,10 @@ func migrate(db *sql.DB) error {
 	// Migration: tambah kolom status ke tabel devices jika belum ada
 	_, _ = db.Exec("ALTER TABLE devices ADD COLUMN status TEXT DEFAULT 'active'")
 
+	// Migration: tambah kolom alert_type, acknowledged, acknowledged_at ke tabel alerts
+	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN alert_type TEXT DEFAULT 'critical'")
+	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN acknowledged BOOLEAN DEFAULT FALSE")
+	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN acknowledged_at DATETIME")
+
 	return nil
 }

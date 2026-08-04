@@ -7,7 +7,7 @@ export type DeviceMethod = 'ICMP Ping' | 'HTTP Check' | 'TCP Port';
 export type DeviceStatus = 'active' | 'inactive';
 export type MonitorStatus = 'online' | 'offline' | 'warning' | 'unknown';
 export type AlertStatus = 'ongoing' | 'resolved';
-export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical' | 'info';
 
 export interface Device {
   id: number;
@@ -53,6 +53,8 @@ export interface Alert {
   started_at: string;
   resolved_at: string | null;
   description: string;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
 }
 
 export interface AlertFilters {
@@ -209,6 +211,14 @@ export function fetchAlerts(filters: AlertFilters = {}): Promise<Alert[]> {
 
 export function resolveAlert(id: number): Promise<void> {
   return request<void>(`/api/alerts/${id}/resolve`, jsonRequest('PUT'), false);
+}
+
+export function acknowledgeAlert(id: number): Promise<void> {
+  return request<void>(`/api/alerts/${id}/acknowledge`, jsonRequest('PUT'), false);
+}
+
+export function fetchAlertCount(): Promise<{ ongoing: number }> {
+  return request<{ ongoing: number }>('/api/alerts/count');
 }
 
 export function fetchDashboard(): Promise<Dashboard> {

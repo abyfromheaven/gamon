@@ -19,9 +19,10 @@ export function AlertBanner({ data, onDetail, onDismiss }: AlertBannerProps) {
   const [visible, setVisible] = useState(false);
   const [flashing, setFlashing] = useState(true);
 
+  const isRecovery = data.new_status === 'online' && data.old_status === 'offline';
   const isOffline = data.new_status === 'offline';
-  const bgColor = isOffline ? 'bg-danger' : 'bg-warning';
-  const textColor = isOffline ? 'text-white' : 'text-bg';
+  const bgColor = isRecovery ? 'bg-success' : isOffline ? 'bg-danger' : 'bg-warning';
+  const textColor = isRecovery || isOffline ? 'text-white' : 'text-bg';
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
@@ -44,13 +45,19 @@ export function AlertBanner({ data, onDetail, onDismiss }: AlertBannerProps) {
     >
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-3 flex items-center gap-4">
         <div className="relative shrink-0">
-          <svg className="w-6 h-6 animate-pulse-ring" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
+          {isRecovery ? (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6 animate-pulse-ring" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">
-            PERINGATAN: {data.device_name} ({data.device_ip}) berubah dari{' '}
+            {isRecovery ? 'RECOVERY' : 'PERINGATAN'}: {data.device_name} ({data.device_ip}) berubah dari{' '}
             <span className="uppercase font-bold">{data.old_status}</span> ke{' '}
             <span className="uppercase font-bold">{data.new_status}</span>
           </p>

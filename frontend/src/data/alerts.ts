@@ -13,6 +13,8 @@ export const alertData: Alert[] = [
     description: 'Device unreachable — no response for 3 consecutive check intervals. Last known IP: 192.168.1.1. Physical inspection recommended.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 120000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 2,
@@ -26,6 +28,8 @@ export const alertData: Alert[] = [
     description: 'Latency above threshold — 245ms avg (limit: 100ms). Possible congestion on uplink port Gi0/1. Traffic shaping may be required.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 300000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 3,
@@ -39,6 +43,8 @@ export const alertData: Alert[] = [
     description: 'HTTP status 503 — service unavailable. Web server not responding on port 443. Backend pool health check failing.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 720000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 4,
@@ -52,6 +58,8 @@ export const alertData: Alert[] = [
     description: 'Disk usage above 90% — 92.4% used. Partition /dev/sda1 mounted on /var/log. Log rotation or cleanup needed.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 1080000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 5,
@@ -65,6 +73,8 @@ export const alertData: Alert[] = [
     description: 'Connection restored after 4 failed checks. Device is back online and responding normally. No further action required.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 480000,
+      acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 6,
@@ -78,6 +88,8 @@ export const alertData: Alert[] = [
     description: 'Packet loss at 15% over last 5 minutes. Affecting downstream traffic to subnet 10.0.2.0/24. Link quality degradation suspected.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 1500000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 7,
@@ -91,6 +103,8 @@ export const alertData: Alert[] = [
     description: 'CPU temperature exceeded 85°C threshold. Peak recorded: 89°C. Temperature returned to normal after fan speed adjustment.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 3600000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 8,
@@ -104,6 +118,8 @@ export const alertData: Alert[] = [
     description: 'Interface Fa0/24 flapping — 8 state changes in 10 minutes. Possible cable fault or NIC issue on connected device Server-08.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 5400000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 9,
@@ -117,6 +133,8 @@ export const alertData: Alert[] = [
     description: 'DNS resolution time above 500ms threshold. Upstream DNS server 8.8.8.8 experiencing high response latency.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 7200000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 10,
@@ -130,6 +148,8 @@ export const alertData: Alert[] = [
     description: 'Device completely offline — no response for 10 consecutive checks. Located in Building C, Floor 2. Power cycle may be needed.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 9000000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 11,
@@ -143,6 +163,8 @@ export const alertData: Alert[] = [
     description: 'Memory usage at 88%. Application java-app consuming 4.2GB of 8GB total. Restart freed memory to 62%.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 10800000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 12,
@@ -156,6 +178,8 @@ export const alertData: Alert[] = [
     description: 'CRC errors detected on port Fa0/12. Error count: 1,247. Cable replacement resolved the issue.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 12600000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 13,
@@ -169,6 +193,8 @@ export const alertData: Alert[] = [
     description: 'Default gateway 10.0.0.1 unreachable. BGP session dropped. ISP link restored after provider maintenance.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 16200000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 14,
@@ -182,6 +208,8 @@ export const alertData: Alert[] = [
     description: 'SSL certificate for gamon.example.com expires in 7 days. Renewal required to avoid service interruption.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 21600000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 15,
@@ -195,6 +223,8 @@ export const alertData: Alert[] = [
     description: 'Scheduled daily backup completed successfully. Backup size: 12.3GB. Stored to remote NAS at 10.0.10.50.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 43200000,
+      acknowledged: false,
+    acknowledgedAt: null,
   },
   {
     id: 16,
@@ -208,5 +238,7 @@ export const alertData: Alert[] = [
     description: 'Broadcast storm detected — loop on VLAN 10. STP converged and blocked port Fa0/18. Admin intervention cleared the loop.',
     monitoringMethod: 'ICMP Ping',
     timestamp: Date.now() - 86400000,
+    acknowledged: false,
+    acknowledgedAt: null,
   },
 ];

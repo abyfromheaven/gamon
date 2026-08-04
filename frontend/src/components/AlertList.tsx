@@ -47,7 +47,10 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
                   }`}
                 >
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-text-primary font-medium">{alert.title}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-danger" />
+                      <span className="text-sm text-text-primary font-medium">{alert.title}</span>
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex flex-col">
@@ -56,14 +59,19 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                      alert.status === 'ongoing' ? 'text-danger' : 'text-success'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        alert.status === 'ongoing' ? 'bg-danger animate-breathe' : 'bg-success'
-                      }`} />
-                      {alert.status === 'ongoing' ? 'Ongoing' : 'Resolved'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                        alert.status === 'ongoing' ? 'text-danger' : 'text-success'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          alert.status === 'ongoing' ? 'bg-danger animate-breathe' : 'bg-success'
+                        }`} />
+                        {alert.status === 'ongoing' ? 'Ongoing' : 'Resolved'}
+                      </span>
+                      {alert.acknowledged && (
+                        <span className="text-[10px] text-accent bg-accent/10 px-1.5 py-0.5 rounded font-medium">ACK</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <SeverityBadge severity={alert.severity} />
@@ -92,12 +100,15 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary font-medium truncate">{alert.title}</p>
-                  <p className="text-xs text-text-muted font-mono mt-0.5">{alert.device}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-danger" />
+                    <p className="text-sm text-text-primary font-medium truncate">{alert.title}</p>
+                  </div>
+                  <p className="text-xs text-text-muted font-mono mt-0.5 ml-3.5">{alert.device}</p>
                 </div>
                 <SeverityBadge severity={alert.severity} />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between ml-3.5">
                 <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
                   alert.status === 'ongoing' ? 'text-danger' : 'text-success'
                 }`}>
@@ -105,6 +116,9 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
                     alert.status === 'ongoing' ? 'bg-danger' : 'bg-success'
                   }`} />
                   {alert.status === 'ongoing' ? 'Ongoing' : 'Resolved'}
+                  {alert.acknowledged && (
+                    <span className="text-[10px] text-accent bg-accent/10 px-1.5 py-0.5 rounded font-medium ml-1">ACK</span>
+                  )}
                 </span>
                 <span className="text-[10px] text-text-muted font-mono">{alert.startTime}</span>
               </div>

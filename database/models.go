@@ -30,14 +30,17 @@ type PingHistory struct {
 }
 
 type Alert struct {
-	ID          int        `json:"id"`
-	DeviceID    int        `json:"device_id"`
-	Title       string     `json:"title"`
-	Status      string     `json:"status"`
-	Severity    string     `json:"severity"`
-	StartedAt   time.Time  `json:"started_at"`
-	ResolvedAt  *time.Time `json:"resolved_at"`
-	Description string     `json:"description"`
+	ID            int        `json:"id"`
+	DeviceID      int        `json:"device_id"`
+	Title         string     `json:"title"`
+	Status        string     `json:"status"`
+	Severity      string     `json:"severity"`
+	AlertType     string     `json:"alert_type"`
+	StartedAt     time.Time  `json:"started_at"`
+	ResolvedAt    *time.Time `json:"resolved_at"`
+	Description   string     `json:"description"`
+	Acknowledged  bool       `json:"acknowledged"`
+	AcknowledgedAt *time.Time `json:"acknowledged_at"`
 }
 
 type DeviceWithType struct {

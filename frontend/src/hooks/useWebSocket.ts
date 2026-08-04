@@ -23,6 +23,7 @@ export function useWebSocket(onReconnect?: () => void) {
   const [monitorResults, setMonitorResults] = useState<Map<number, MonitorResult>>(new Map());
   const [lastStatusChange, setLastStatusChange] = useState<StatusChange | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
 
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
@@ -76,5 +77,5 @@ export function useWebSocket(onReconnect?: () => void) {
     };
   }, [connect]);
 
-  return { isConnected, monitorResults, lastStatusChange };
+  return { isConnected, monitorResults, lastStatusChange, alertCount, setAlertCount };
 }

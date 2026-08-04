@@ -27,6 +27,8 @@ export const dashboardData: DashboardData = {
       description: 'Device unreachable — no response for 3 check intervals. Last known IP: 192.168.1.1.',
       monitoringMethod: 'ICMP Ping',
       timestamp: Date.now() - 120000,
+      acknowledged: false,
+      acknowledgedAt: null,
     },
     {
       id: 2,
@@ -40,6 +42,8 @@ export const dashboardData: DashboardData = {
       description: 'Latency above threshold — 245ms avg (limit: 100ms). Possible congestion on uplink port.',
       monitoringMethod: 'ICMP Ping',
       timestamp: Date.now() - 300000,
+      acknowledged: false,
+      acknowledgedAt: null,
     },
     {
       id: 3,
@@ -53,6 +57,8 @@ export const dashboardData: DashboardData = {
       description: 'Connection restored after 4 failed checks. Device is back online and responding normally.',
       monitoringMethod: 'ICMP Ping',
       timestamp: Date.now() - 480000,
+      acknowledged: false,
+      acknowledgedAt: null,
     },
     {
       id: 4,
@@ -66,6 +72,8 @@ export const dashboardData: DashboardData = {
       description: 'HTTP status 503 — service unavailable. Web server not responding on port 443.',
       monitoringMethod: 'ICMP Ping',
       timestamp: Date.now() - 720000,
+      acknowledged: false,
+      acknowledgedAt: null,
     },
     {
       id: 5,
@@ -79,6 +87,8 @@ export const dashboardData: DashboardData = {
       description: 'Disk usage above 90% — 92.4% used. Partition /dev/sda1 on /var/log.',
       monitoringMethod: 'ICMP Ping',
       timestamp: Date.now() - 1080000,
+      acknowledged: false,
+      acknowledgedAt: null,
     },
   ],
   systemStatus: {
