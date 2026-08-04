@@ -18,6 +18,7 @@ export function DeviceManagementPage() {
   const [isFormOpen, setFormOpen] = useState(false);
   const [isSaving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -52,6 +53,8 @@ export function DeviceManagementPage() {
       );
       setFormOpen(false);
       setEditing(null);
+      setToast(editing ? `Device "${saved.name}" berhasil diupdate` : `Device "${saved.name}" berhasil ditambahkan`);
+      setTimeout(() => setToast(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menyimpan device.');
     } finally {
@@ -94,6 +97,11 @@ export function DeviceManagementPage() {
           onAction={() => { setEditing(null); setFormOpen(true); }}
         />
         {error && <p className="mb-4 rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}
+        {toast && (
+          <div className="mb-4 rounded bg-surface border border-border p-3 text-sm text-text-primary animate-fade-in">
+            {toast}
+          </div>
+        )}
         <SearchBar search={search} onSearchChange={setSearch} activeFilter={filter} onFilterChange={setFilter} />
         <DeviceTable
           devices={filtered}

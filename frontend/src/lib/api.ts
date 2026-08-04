@@ -5,7 +5,7 @@ const apiBaseURL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).r
 export type DeviceType = 'Server' | 'Router' | 'Switch' | 'Access Point' | 'Website';
 export type DeviceMethod = 'ICMP Ping' | 'HTTP Check' | 'TCP Port';
 export type DeviceStatus = 'active' | 'inactive';
-export type MonitorStatus = 'online' | 'offline' | 'warning' | 'unknown';
+export type MonitorStatus = 'online' | 'offline' | 'unknown';
 export type AlertStatus = 'ongoing' | 'resolved';
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical' | 'info';
 
@@ -67,7 +67,6 @@ export interface DashboardSummary {
   total_devices: number;
   online_devices: number;
   offline_devices: number;
-  warning_devices: number;
 }
 
 export interface DashboardAlert {
@@ -231,4 +230,27 @@ export function fetchMonitoring(): Promise<MonitoringRecord[]> {
 
 export function fetchDeviceHistory(id: number): Promise<PingHistoryRecord[]> {
   return request<PingHistoryRecord[]>(`/api/monitoring/${id}/history`);
+}
+
+export interface TelegramStatus {
+  status: string;
+  chat_id: string;
+  paired_at: string | null;
+}
+
+export interface PairingToken {
+  token: string;
+  expires_at: string;
+}
+
+export function generatePairingToken(): Promise<PairingToken> {
+  return request<PairingToken>('/api/telegram/pair', jsonRequest('POST'));
+}
+
+export function getTelegramStatus(): Promise<TelegramStatus> {
+  return request<TelegramStatus>('/api/telegram/status');
+}
+
+export function disconnectTelegram(): Promise<void> {
+  return request<void>('/api/telegram/disconnect', jsonRequest('DELETE'), false);
 }

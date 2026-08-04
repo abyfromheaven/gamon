@@ -93,7 +93,6 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
     total: live.length,
     online: live.filter((item) => item.status === 'online').length,
     offline: live.filter((item) => item.status === 'offline').length,
-    warning: live.filter((item) => item.status === 'warning').length,
   };
 
   const detail = selected && devices.find((device) => device.id === selected.device_id);
@@ -102,7 +101,7 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
     <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-5">
       <PageHeader
         title="Monitoring"
-        subtitle={`${counts.total} devices · ${counts.online} online · ${counts.offline} offline · ${counts.warning} warning`}
+        subtitle={`${counts.total} devices · ${counts.online} online · ${counts.offline} offline`}
       />
 
       {error && <p className="rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}
@@ -122,7 +121,6 @@ export function MonitoringPage({ monitorResults, reconnectKey }: { monitorResult
           <option value="all">All status</option>
           <option value="online">Online</option>
           <option value="offline">Offline</option>
-          <option value="warning">Warning</option>
           <option value="unknown">Unknown</option>
         </select>
         <select

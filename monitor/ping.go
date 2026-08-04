@@ -10,10 +10,7 @@ import (
 
 const (
 	StatusOnline  = "online"
-	StatusWarning = "warning"
 	StatusOffline = "offline"
-
-	LatencyWarningThreshold = 200.0
 )
 
 // CheckResult is the normalized result emitted by every monitoring method.
@@ -75,10 +72,6 @@ func PingOnce(ip string, seq int) CheckResult {
 				}
 			}
 		}
-	}
-
-	if result.Status == StatusOnline && result.LatencyMs >= LatencyWarningThreshold {
-		result.Status = StatusWarning
 	}
 
 	return result

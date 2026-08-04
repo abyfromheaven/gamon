@@ -20,9 +20,8 @@ export function AlertBanner({ data, onDetail, onDismiss }: AlertBannerProps) {
   const [flashing, setFlashing] = useState(true);
 
   const isRecovery = data.new_status === 'online' && data.old_status === 'offline';
-  const isOffline = data.new_status === 'offline';
-  const bgColor = isRecovery ? 'bg-success' : isOffline ? 'bg-danger' : 'bg-warning';
-  const textColor = isRecovery || isOffline ? 'text-white' : 'text-bg';
+  const bgColor = isRecovery ? 'bg-success' : 'bg-danger';
+  const textColor = 'text-white';
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));

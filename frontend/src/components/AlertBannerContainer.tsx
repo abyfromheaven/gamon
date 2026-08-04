@@ -14,6 +14,7 @@ export function AlertBannerContainer({ statusChange, onNavigateToMonitoring }: A
 
   useEffect(() => {
     if (!statusChange) return;
+    if (!statusChange.old_status) return; // skip device baru
 
     const banner: AlertBannerData = {
       device_id: statusChange.device_id,

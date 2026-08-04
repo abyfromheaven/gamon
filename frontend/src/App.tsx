@@ -7,12 +7,14 @@ import { DeviceManagementPage } from './pages/DeviceManagementPage';
 import { AlertCenterPage } from './pages/AlertCenterPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { AlertBannerContainer } from './components/AlertBannerContainer';
+import { SettingsModal } from './components/SettingsModal';
 
 function App() {
   const [reconnectKey, setReconnectKey] = useState(0);
   const handleReconnect = useCallback(() => setReconnectKey((k) => k + 1), []);
   const { isConnected, monitorResults, lastStatusChange, alertCount, setAlertCount } = useWebSocket(handleReconnect);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const navigateToMonitoring = useCallback((_deviceId: number) => {
     setCurrentPage('monitoring');
@@ -20,7 +22,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <Sidebar activePage={currentPage} onNavigate={setCurrentPage} alertCount={alertCount} />
+      <Sidebar activePage={currentPage} onNavigate={setCurrentPage} onOpenSettings={() => setIsSettingsOpen(true)} alertCount={alertCount} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <div className="lg:hidden">
@@ -39,6 +41,7 @@ function App() {
       </div>
 
       <AlertBannerContainer statusChange={lastStatusChange} onNavigateToMonitoring={navigateToMonitoring} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

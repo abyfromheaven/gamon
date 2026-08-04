@@ -1,5 +1,5 @@
 interface StatusIndicatorProps {
-  status: 'online' | 'offline' | 'warning' | 'unknown';
+  status: 'online' | 'offline' | 'unknown';
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -12,7 +12,6 @@ const sizeMap = {
 const colorMap = {
   online: 'bg-success',
   offline: 'bg-danger',
-  warning: 'bg-warning',
   unknown: 'bg-text-muted',
 };
 

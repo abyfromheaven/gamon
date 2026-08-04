@@ -91,8 +91,8 @@ func TestEngine_ThreeOfflineChecksCreateAlertAndRecoveryResolvesIt(t *testing.T)
 	}
 	// Note: alert_created is no longer broadcast via WS in simplified system
 	// We only have status_change events now
-	if statusChanges != 2 {
-		t.Fatalf("status_changes = %d, want 2", statusChanges)
+	if statusChanges != 1 {
+		t.Fatalf("status_changes = %d, want 1 (offline→online only, first check skipped)", statusChanges)
 	}
 	if hub.messages[len(hub.messages)-1] != "check_result" {
 		t.Fatalf("last message = %s, want check_result", hub.messages[len(hub.messages)-1])

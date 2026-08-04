@@ -50,7 +50,7 @@ export function DeviceSummary({ devices }: DeviceSummaryProps) {
                 <span className="font-mono text-sm text-text-muted">
                   {device.count}
                 </span>
-                <StatusIndicator status={allOnline ? 'online' : 'warning'} size="sm" />
+                <StatusIndicator status={allOnline ? 'online' : 'offline'} size="sm" />
               </div>
             </div>
           );

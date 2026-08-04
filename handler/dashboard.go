@@ -24,7 +24,6 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		TotalDevices   int `json:"total_devices"`
 		OnlineDevices  int `json:"online_devices"`
 		OfflineDevices int `json:"offline_devices"`
-		WarningDevices int `json:"warning_devices"`
 	}
 
 	type LatestAlert struct {
@@ -65,16 +64,6 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		WHERE ph.status = 'offline'`).Scan(&summary.OfflineDevices)
 	if err != nil {
 		log.Printf("Error counting offline devices: %v", err)
-	}
-
-	err = h.db.QueryRow(`SELECT COUNT(DISTINCT d.id)
-		FROM devices d
-		LEFT JOIN ping_history ph ON d.id = ph.device_id AND ph.id = (
-			SELECT id FROM ping_history WHERE device_id = d.id ORDER BY timestamp DESC LIMIT 1
-		)
-		WHERE ph.status = 'warning'`).Scan(&summary.WarningDevices)
-	if err != nil {
-		log.Printf("Error counting warning devices: %v", err)
 	}
 
 	rows, err := h.db.Query(`SELECT a.id, d.name, a.title, a.severity, a.status, a.started_at

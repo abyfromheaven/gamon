@@ -66,7 +66,6 @@ export interface DashboardData {
     totalDevices: number;
     online: number;
     offline: number;
-    warnings: number;
   };
   deviceBreakdown: DeviceBreakdown[];
   latestAlerts: Alert[];

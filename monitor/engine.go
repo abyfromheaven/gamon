@@ -17,6 +17,12 @@ type HubInterface interface {
 	Broadcast(msgType string, data interface{})
 }
 
+type Notifier interface {
+	IsEnabled() bool
+	SendAlert(deviceName, deviceIP string)
+	SendRecovery(deviceName, deviceIP string)
+}
+
 type DeviceConfig struct {
 	DeviceID int
 	IP       string
@@ -58,9 +64,16 @@ func WithCheckFunc(check CheckFunc) EngineOption {
 	}
 }
 
+func WithNotifier(n Notifier) EngineOption {
+	return func(engine *Engine) {
+		engine.notifier = n
+	}
+}
+
 type Engine struct {
-	hub HubInterface
-	db  *sql.DB
+	hub      HubInterface
+	db       *sql.DB
+	notifier Notifier
 
 	mu            sync.Mutex
 	targets       map[int]context.CancelFunc
@@ -162,9 +175,17 @@ func (e *Engine) runCheck(config DeviceConfig, seq int) {
 
 	if shouldResolve {
 		e.resolveAlerts(result.DeviceID)
+		if e.notifier != nil && e.notifier.IsEnabled() {
+			deviceName := e.getDeviceName(result.DeviceID)
+			e.notifier.SendRecovery(deviceName, result.IP)
+		}
 	}
 	if shouldAlert {
 		e.createAlert(result.DeviceID)
+		if e.notifier != nil && e.notifier.IsEnabled() {
+			deviceName := e.getDeviceName(result.DeviceID)
+			e.notifier.SendAlert(deviceName, result.IP)
+		}
 	}
 	if change != nil {
 		e.hub.Broadcast("status_change", *change)
@@ -198,9 +219,6 @@ func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
 			newStatus = StatusOffline
 			createAlert = true
 		}
-	case StatusWarning:
-		e.failures[result.DeviceID] = 0
-		newStatus = StatusWarning
 	case StatusOnline:
 		e.failures[result.DeviceID] = 0
 		newStatus = StatusOnline
@@ -226,6 +244,11 @@ func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
 	}
 	e.lastStatus[result.DeviceID] = newStatus
 	e.mu.Unlock()
+
+	// Device baru: tetap proses alert, tapi jangan broadcast status_change
+	if oldStatus == "" {
+		return nil, resolveAlert, createAlert
+	}
 
 	return change, resolveAlert, createAlert
 }

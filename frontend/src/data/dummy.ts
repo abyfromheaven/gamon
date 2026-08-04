@@ -5,7 +5,6 @@ export const dashboardData: DashboardData = {
     totalDevices: 47,
     online: 42,
     offline: 3,
-    warnings: 2,
   },
   deviceBreakdown: [
     { type: 'Server', count: 12, online: 11 },

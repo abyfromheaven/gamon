@@ -80,6 +80,15 @@ func migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_ping_history_timestamp ON ping_history(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_device_id ON alerts(device_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status)`,
+		`CREATE TABLE IF NOT EXISTS telegram_pairing (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			token TEXT NOT NULL UNIQUE,
+			chat_id TEXT DEFAULT '',
+			status TEXT DEFAULT 'pending',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME NOT NULL,
+			paired_at DATETIME
+		)`,
 	}
 
 	for _, q := range queries {

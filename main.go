@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"gamon/database"
 	"gamon/handler"
 	"gamon/monitor"
+	"gamon/notification"
 )
 
 func main() {
@@ -22,7 +24,18 @@ func main() {
 	hub := handler.NewHub(db)
 	go hub.Run()
 
-	engine := monitor.NewEngine(hub, db)
+	notifier := notification.NewTelegramNotifier(db)
+	telegramHandler := handler.NewTelegramHandler(db)
+
+	if notifier.IsEnabled() {
+		log.Println("Telegram notification: enabled")
+		poller := notification.NewTelegramPoller(os.Getenv("TELEGRAM_BOT_TOKEN"), telegramHandler.CompletePairing)
+		go poller.Start()
+	} else {
+		log.Println("Telegram notification: disabled (set TELEGRAM_BOT_TOKEN to enable)")
+	}
+
+	engine := monitor.NewEngine(hub, db, monitor.WithNotifier(notifier))
 
 	deviceHandler := handler.NewDeviceHandler(db, engine, hub)
 	alertHandler := handler.NewAlertHandler(db)
@@ -43,6 +56,9 @@ func main() {
 	mux.HandleFunc("/api/dashboard", dashboardHandler.HandleDashboard)
 	mux.HandleFunc("/api/monitoring", monitoringHandler.HandleMonitoring)
 	mux.HandleFunc("/api/monitoring/", monitoringHandler.HandleMonitoringDevice)
+	mux.HandleFunc("/api/telegram/pair", telegramHandler.HandlePair)
+	mux.HandleFunc("/api/telegram/status", telegramHandler.HandleStatus)
+	mux.HandleFunc("/api/telegram/disconnect", telegramHandler.HandleDisconnect)
 	mux.HandleFunc("/api/health", legacyAPI.Health)
 
 	wrapped := corsMiddleware(mux)
