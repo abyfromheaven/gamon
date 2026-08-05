@@ -89,6 +89,11 @@ func migrate(db *sql.DB) error {
 			expires_at DATETIME NOT NULL,
 			paired_at DATETIME
 		)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 
 	for _, q := range queries {
@@ -106,4 +111,21 @@ func migrate(db *sql.DB) error {
 	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN acknowledged_at DATETIME")
 
 	return nil
+}
+
+func GetSetting(db *sql.DB, key, defaultValue string) string {
+	var value string
+	err := db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value)
+	if err != nil {
+		return defaultValue
+	}
+	return value
+}
+
+func SetSetting(db *sql.DB, key, value string) error {
+	_, err := db.Exec(
+		"INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP",
+		key, value, value,
+	)
+	return err
 }

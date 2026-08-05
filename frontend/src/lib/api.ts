@@ -254,3 +254,17 @@ export function getTelegramStatus(): Promise<TelegramStatus> {
 export function disconnectTelegram(): Promise<void> {
   return request<void>('/api/telegram/disconnect', jsonRequest('DELETE'), false);
 }
+
+export interface AppSettings {
+  failure_threshold: number;
+  check_interval: number;
+  notifications_enabled: boolean;
+}
+
+export function getSettings(): Promise<AppSettings> {
+  return request<AppSettings>('/api/settings');
+}
+
+export function updateSettings(settings: Partial<AppSettings>): Promise<void> {
+  return request<void>('/api/settings', jsonRequest('PUT', settings), false);
+}

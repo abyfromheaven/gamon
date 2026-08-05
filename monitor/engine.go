@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strconv"
 	"sync"
 	"time"
-)
 
-const (
-	offlineFailureThreshold = 3
+	"gamon/database"
 )
 
 type HubInterface interface {
@@ -211,11 +210,12 @@ func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
 	newStatus := oldStatus
 	resolveAlert := false
 	createAlert := false
+	threshold := e.getFailureThreshold()
 
 	switch result.Status {
 	case StatusOffline:
 		e.failures[result.DeviceID]++
-		if e.failures[result.DeviceID] >= offlineFailureThreshold && oldStatus != StatusOffline {
+		if e.failures[result.DeviceID] >= threshold && oldStatus != StatusOffline {
 			newStatus = StatusOffline
 			createAlert = true
 		}
@@ -275,4 +275,13 @@ func (e *Engine) getDeviceName(deviceID int) string {
 		return "Unknown"
 	}
 	return name
+}
+
+func (e *Engine) getFailureThreshold() int {
+	val := database.GetSetting(e.db, "failure_threshold", "3")
+	threshold, err := strconv.Atoi(val)
+	if err != nil || threshold < 1 {
+		return 3
+	}
+	return threshold
 }

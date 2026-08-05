@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { TelegramSettings } from './TelegramSettings';
+import { MonitoringSettings } from './MonitoringSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type Tab = 'telegram';
+type Tab = 'monitoring' | 'telegram';
 
 const tabs: { id: Tab; label: string }[] = [
+  { id: 'monitoring', label: 'Monitoring' },
   { id: 'telegram', label: 'Telegram Bot Integration' },
 ];
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('telegram');
+  const [activeTab, setActiveTab] = useState<Tab>('monitoring');
 
   if (!isOpen) return null;
 
@@ -63,6 +65,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Tab Content */}
           <div className="flex-1 p-6 overflow-y-auto">
+            {activeTab === 'monitoring' && <MonitoringSettings />}
             {activeTab === 'telegram' && <TelegramSettings />}
           </div>
         </div>

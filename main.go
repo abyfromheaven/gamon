@@ -41,6 +41,7 @@ func main() {
 	alertHandler := handler.NewAlertHandler(db)
 	dashboardHandler := handler.NewDashboardHandler(db)
 	monitoringHandler := handler.NewMonitoringHandler(db)
+	settingsHandler := handler.NewSettingsHandler(db)
 	legacyAPI := handler.NewAPI(engine, hub)
 
 	mux := http.NewServeMux()
@@ -59,6 +60,7 @@ func main() {
 	mux.HandleFunc("/api/telegram/pair", telegramHandler.HandlePair)
 	mux.HandleFunc("/api/telegram/status", telegramHandler.HandleStatus)
 	mux.HandleFunc("/api/telegram/disconnect", telegramHandler.HandleDisconnect)
+	mux.HandleFunc("/api/settings", settingsHandler.HandleSettings)
 	mux.HandleFunc("/api/health", legacyAPI.Health)
 
 	wrapped := corsMiddleware(mux)
