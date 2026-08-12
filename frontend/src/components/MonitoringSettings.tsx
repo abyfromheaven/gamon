@@ -90,35 +90,6 @@ export function MonitoringSettings() {
         </p>
       </div>
 
-      {/* Check Interval */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-text-primary">
-          Default Check Interval
-        </label>
-        <p className="text-xs text-text-muted">
-          Interval default untuk device baru (dalam detik)
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={1}
-            max={30}
-            value={settings.check_interval}
-            onChange={(e) => setSettings({ ...settings, check_interval: Number(e.target.value) })}
-            className="flex-1 h-2 bg-surface-elevated rounded-lg appearance-none cursor-pointer accent-accent"
-          />
-          <span className="w-14 text-center text-sm font-mono font-semibold text-accent">
-            {settings.check_interval}s
-          </span>
-        </div>
-        <p className="text-[11px] text-text-muted">
-          {settings.check_interval <= 2 && 'Sangat cepat — real-time tapi lebih berat'}
-          {settings.check_interval >= 3 && settings.check_interval <= 5 && 'Default — balance antara responsif dan ringan'}
-          {settings.check_interval >= 6 && settings.check_interval <= 10 && 'Sedang — lebih ringan untuk jaringan lambat'}
-          {settings.check_interval > 10 && 'Lambat — sangat ringan, cocok untuk banyak device'}
-        </p>
-      </div>
-
       {/* Save Button */}
       <div className="flex items-center gap-3 pt-2">
         <button
@@ -129,7 +100,7 @@ export function MonitoringSettings() {
           {saving ? 'Menyimpan...' : 'Simpan Settings'}
         </button>
         <button
-          onClick={() => setSettings({ failure_threshold: 3, check_interval: 3, notifications_enabled: true })}
+          onClick={() => setSettings({ failure_threshold: 3, notifications_enabled: true })}
           disabled={saving}
           className="px-4 py-2.5 bg-surface border border-border text-text-secondary text-sm font-medium rounded-lg hover:bg-surface-elevated transition-colors disabled:opacity-50 cursor-pointer"
         >

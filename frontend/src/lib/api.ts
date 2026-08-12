@@ -257,7 +257,6 @@ export function disconnectTelegram(): Promise<void> {
 
 export interface AppSettings {
   failure_threshold: number;
-  check_interval: number;
   notifications_enabled: boolean;
 }
 

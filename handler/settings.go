@@ -14,9 +14,8 @@ type SettingsHandler struct {
 }
 
 type SettingsResponse struct {
-	FailureThreshold   int    `json:"failure_threshold"`
-	CheckInterval      int    `json:"check_interval"`
-	NotificationsEnabled bool  `json:"notifications_enabled"`
+	FailureThreshold     int  `json:"failure_threshold"`
+	NotificationsEnabled bool `json:"notifications_enabled"`
 }
 
 func NewSettingsHandler(db *sql.DB) *SettingsHandler {
@@ -36,16 +35,13 @@ func (h *SettingsHandler) HandleSettings(w http.ResponseWriter, r *http.Request)
 
 func (h *SettingsHandler) getSettings(w http.ResponseWriter, _ *http.Request) {
 	failureThreshold := database.GetSetting(h.db, "failure_threshold", "3")
-	checkInterval := database.GetSetting(h.db, "check_interval", "3")
 	notificationsEnabled := database.GetSetting(h.db, "notifications_enabled", "true")
 
 	ft, _ := strconv.Atoi(failureThreshold)
-	ci, _ := strconv.Atoi(checkInterval)
 	ne := notificationsEnabled == "true"
 
 	respondData(w, SettingsResponse{
 		FailureThreshold:     ft,
-		CheckInterval:        ci,
 		NotificationsEnabled: ne,
 	})
 }
@@ -53,7 +49,6 @@ func (h *SettingsHandler) getSettings(w http.ResponseWriter, _ *http.Request) {
 func (h *SettingsHandler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FailureThreshold     *int  `json:"failure_threshold"`
-		CheckInterval        *int  `json:"check_interval"`
 		NotificationsEnabled *bool `json:"notifications_enabled"`
 	}
 
@@ -68,14 +63,6 @@ func (h *SettingsHandler) updateSettings(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		database.SetSetting(h.db, "failure_threshold", strconv.Itoa(*req.FailureThreshold))
-	}
-
-	if req.CheckInterval != nil {
-		if *req.CheckInterval < 1 || *req.CheckInterval > 60 {
-			respondError(w, http.StatusBadRequest, "Check interval harus antara 1-60 detik")
-			return
-		}
-		database.SetSetting(h.db, "check_interval", strconv.Itoa(*req.CheckInterval))
 	}
 
 	if req.NotificationsEnabled != nil {
