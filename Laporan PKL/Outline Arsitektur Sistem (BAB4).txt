@@ -1,0 +1,32 @@
+1. Gambaran Umum Arsitektur Client–Server
+- Perkenalan pola aplikasi web 2 sisi (client dan server) yang berjalan terpisah.
+- Perkenalan konsep Gamon sebagai sistem monitoring yang menghubungkan admin, aplikasi web, dan perangkat target yang dipantau.
+- Pengelompokan komponen jadi lapisan (biar gamblang & rapi):
+- Client tier: Browser + Frontend React
+- Server tier: Backend Go (terdiri dari REST API, WebSocket, Monitoring Engine)
+- Data tier: SQLite (database lokal/serverless)
+- Eksternal: ICMP ping, perangkat target, Telegram Bot API + aplikasi Telegram
+
+2. Diagram Arsitektur
+- Gambar kotak & garis komunikasi antar seluruh komponen.
+- Fokus hubungan antar komponen, bukan kode/endpoint.
+
+3. Komunikasi Antar Komponen (siapa bicara dengan siapa)
+- Browser ↔ Frontend React (interaksi pengguna lewat antarmuka)
+- Frontend React ↔ Backend Go via REST API (request–response: kirim perintah & ambil data)
+- Frontend React ↔ Backend Go via WebSocket (kirim data realtime ke tampilan tanpa refresh)
+- Backend Go ↔ SQLite (baca/tulis data persisten)
+- Backend Go ↔ ICMP ping → perangkat target (pengecekan ketersediaan perangkat)
+- Backend Go ↔ Telegram Bot API → aplikasi Telegram (kirim pemberitahuan ke admin)
+
+4. Aliran Data (data mengalir ke mana)
+- Jalur monitoring: perangkat target → ICMP → Backend Go → (disimpan di SQLite) → WebSocket → Frontend React → Browser
+- Jalur notifikasi: Backend Go → Telegram Bot API → aplikasi Telegram
+- Jalur manajemen: Browser → Frontend React → REST API → Backend Go → SQLite
+
+5. Fungsi Masing-Masing Komponen
+- Tabel: nama komponen → fungsi → peran singkatnya dalam sistem
+
+Tidak dibahas di sini
+- Endpoint API, goroutine, kode Go, port, konfigurasi — semua milik Implementasi (4.9).
+Komponen yang dipakai: Browser, Frontend React, Backend Go, SQLite, REST API, WebSocket, ICMP, Telegram Bot API, Monitoring Engine, Perangkat Target, Aplikasi Telegram

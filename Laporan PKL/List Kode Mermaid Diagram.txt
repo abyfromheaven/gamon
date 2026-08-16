@@ -1,0 +1,56 @@
+1. Diagram Arsitektur
+flowchart TB
+    subgraph CLIENT["LAPISAN CLIENT"]
+        BROWSER["Browser (Peramban)"] --> REACT["Frontend React"]
+    end
+
+    subgraph SERVER["LAPISAN SERVER"]
+        BACKEND["Backend Go"] --> REST["REST API"]
+        BACKEND --> WS["WebSocket"]
+        BACKEND --> ENGINE["Monitoring Engine"]
+    end
+
+    subgraph DATA["LAPISAN DATA"]
+        SQLITE[("SQLite Database")]
+    end
+
+    subgraph EKSTERNAL["LAPISAN EKSTERNAL"]
+        TARGET["Perangkat Target"]
+        BOTAPI["Telegram Bot API"]
+        APPTG["Aplikasi Telegram"]
+    end
+
+    REACT -- "HTTP REST (request–response)" --> REST
+    REACT -- "WebSocket (realtime)" --> WS
+    ENGINE -- "ICMP Ping" --> TARGET
+    BACKEND -- "baca/tulis data" --> SQLITE
+    BACKEND -- "kirim notifikasi" --> BOTAPI
+    BOTAPI -- "pesan notifikasi" --> APPTG
+
+2. Use Case Diagram
+flowchart LR
+    ADMIN["👤 Administrator"]
+    BOT["🤖 Telegram Bot API"]
+
+    subgraph GAMON["Sistem GAMON (Garda Monitoring)"]
+        direction TB
+        UC1["Melihat Dashboard"]
+        UC2["Mengelola Perangkat"]
+        UC3["Memantau Perangkat Real-time"]
+        UC4["Melihat Riwayat Monitoring"]
+        UC5["Melihat Daftar Alert"]
+        UC6["Mengakui Alert"]
+        UC7["Menghubungkan Telegram"]
+        UC8["Mengatur Pengaturan"]
+    end
+
+    ADMIN --- UC1
+    ADMIN --- UC2
+    ADMIN --- UC3
+    ADMIN --- UC4
+    ADMIN --- UC5
+    ADMIN --- UC6
+    ADMIN --- UC7
+    ADMIN --- UC8
+
+    BOT --- UC7

@@ -1,0 +1,146 @@
+openBAB IV
+PEMBAHASAN MASALAH
+
+A. Pembahasan Masalah yang Mengacu pada Judul
+
+4.1 Kondisi Permasalahan
+4.2 Analisis Permasalahan
+4.3 Dampak Permasalahan
+4.4 Solusi yang Diusulkan
+
+B. Implementasi Kegiatan PKL
+
+4.5 Gambaran Umum Aplikasi
+    - Apa itu GAMON
+    - Tujuan
+    - Ruang Lingkup
+    - Pengguna Sistem
+
+↓
+
+4.6 Teknologi yang Digunakan
+    - Golang
+    - React
+    - PostgreSQL
+    - Tailwind CSS
+    - ICMP
+    - Alasan Pemilihan
+
+↓
+
+4.7 Analisis Kebutuhan Sistem
+    - Functional Requirement
+    - Non Functional Requirement
+
+↓
+
+4.8 Perancangan Sistem
+Prinsip: Bagian ini menjelaskan "Desain Sistem". Bukan menjelaskan implementasi, bukan screenshot aplikasi, dan bukan source code. Jadi setiap bagian harus menjawab: "Bagaimana sistem ini dirancang sebelum dibuat?"
+
+0. Pengantar Perancangan
+
+1. Arsitektur Sistem
+Yang dibahas:
+- Browser
+- Gambaran umum arsitektur client-server
+- Frontend React
+- Backend Go
+- SQLite
+- REST API
+- WebSocket
+- ICMP
+- Telegram Bot API
+Lalu diberi diagram arsitektur
+
+Kemudian dijelaskan:
+- Siapa berkomunikasi dengan siapa
+- Data mengalir kemana
+- Fungsi masing-masing komponen
+
+Jangan:
+- Menjelaskan endpoint
+- Menjelaskan goroutine
+- Menjelaskan kode golang
+karena itu bagian dari implementasi, bukan desain / perancangan sistem.
+
+HANYA MENJELASKAN HUBUNGAN ANTAR KOMPONEN
+
+2. Use Case Diagram
+Ini menjawab:
+"Pengguna menggunakan aplikasi untuk apa?"
+
+Yang dibahas:
+- Siapa aktornya
+
+Lalu use case:
+- Melihat dashboard
+- monitoring perangkat
+- melihat alert
+- acknowledge alert
+- resolve alert
+- pairing telegram
+- mengubah settings
+
+Lalu diberi gambar. setelah gambar cukup dijelaskan 1-2 paragraf.
+
+Tidak menjelaskan bagaimana ping bekerja.
+tidak menjelaskan bagaimana alert dibuat.
+
+3. Activity Diagram
+Ini menjelaskan alur aktivitas dan menjelaskan proses.
+
+- Activity Monitoring
+- Activity Device Management
+
+Activity Diagram cocok untuk proses yang melibatkan pengguna.
+
+4. Flowchart
+Nah ini khusus logika sistem:
+- Flowchart Monitoring Engine
+- Flowchart Telegram Pairing
+
+5. ERD
+Ini menjelaskan relasi tabel, kemudian jelaskan relasinya.
+
+6. Struktur Basis Data
+Ini bukan ERD, ini menjelaskan isi masing-masing tabel
+
+baru masuk ke bagian 4.9 Implementasi, yang isinya seperti screenshot, penjelasan dan source codenya.
+↓
+
+4.9 Implementasi Sistem
+
+4.9.1 Dashboard
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.2 Monitoring
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.3 Device Management
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.4 Alert Notification
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.5 Monitoring History
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.6 User Management
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+
+↓
+
+4.10 Hasil Implementasi

@@ -1,4 +1,4 @@
-# BAB 1: PENDAHULUAN
+openco# BAB 1: PENDAHULUAN
 ## Latar Belakang Pemilihan Judul
 ### 1. Perkembangan Teknologi Informasi
 **Tujuan:** Memberikan gambaran umum mengenai perkembangan teknologi informasi dan pentingnya infrastruktur TI dalam sebuah organisasi.
