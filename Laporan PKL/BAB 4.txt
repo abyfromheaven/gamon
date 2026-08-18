@@ -1,0 +1,89 @@
+BAB IV
+PEMBAHASAN MASALAH
+
+A. Pembahasan Masalah yang Mengacu pada Judul
+
+4.1 Kondisi Permasalahan
+4.2 Analisis Permasalahan
+4.3 Dampak Permasalahan
+4.4 Solusi yang Diusulkan
+
+B. Implementasi Kegiatan PKL
+
+4.5 Gambaran Umum Aplikasi
+    - Apa itu GAMON
+    - Tujuan
+    - Ruang Lingkup
+    - Pengguna Sistem
+
+↓
+
+4.6 Teknologi yang Digunakan
+    - Golang
+    - React
+    - PostgreSQL
+    - Tailwind CSS
+    - ICMP
+    - Alasan Pemilihan
+
+↓
+
+4.7 Analisis Kebutuhan Sistem
+(Paragraf pembuka)
+
+4.7.1 Kebutuhan Fungsional
+(Paragraf pembuka)
+- tabel Functional Requirement
+
+4.7.2 Kebutuhan Non-Fungsional
+(Paragraf pembuka)
+- tabel Non Functional Requirement
+
+↓
+
+4.8 Perancangan Sistem
+    - Arsitektur
+    - Use Case
+    - Activity Diagram
+    - Flowchart
+    - ERD
+    - Struktur Database
+
+↓
+
+4.9 Implementasi Sistem
+
+4.9.1 Dashboard
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.2 Monitoring
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.3 Device Management
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.4 Alert Notification
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.5 Monitoring History
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+4.9.6 User Management
+- Deskripsi implementasi
+- Tampilan antarmuka
+- Potongan source code
+
+
+↓
+
+4.10 Hasil Implementasi

@@ -1,0 +1,104 @@
+0. Pengantar Perancangan
+
+
+1. Arsitektur Sistem
+Ini adalah level paling tinggi.
+
+Yang dibahas:
+- gambaran umum arsitektur client-server
+- frontend React
+- backend Go
+- SQLite
+- REST API
+- WebSocket
+- ICMP Engine
+- Telegram Bot API
+- ICMP
+- Monitoring Engine
+- Browser
+
+Lalu diberi diagram arsitektur.
+
+Kemudian dijelaskan:
+- siapa berkomunikasi dengan siapa
+- data mengalir ke mana
+- fungsi masing-masing komponen
+
+Jangan:
+- menjelaskan endpoint
+- menjelaskan goroutine
+- menjelaskan kode Go
+
+Karena itu implementasi.
+
+2. Use Case Diagram
+Yang dibahas:
+
+siapa aktornya
+
+Kemungkinan hanya:
+
+Pengguna
+
+Lalu use case:
+- melihat dashboard
+- monitoring perangkat
+- mengelola perangkat
+- melihat alert
+- acknowledge alert
+- resolve alert
+- pairing Telegram
+- mengubah settings
+
+Lalu diberi gambar.
+Setelah gambar cukup dijelaskan 1–2 paragraf.
+
+3. Activity Diagram
+Ini menjelaskan alur aktivitas, cukup dua diagram.
+- Acitivity Monitoring Diagram
+- Activity Device Management Diagram
+
+4. Flowchart Monitoring
+- Monitoring Engine, Ini menjelaskan logika monitoring.
+- Telegram Token Pairing
+
+5. ERD
+Ini menjelaskan relasi tabel.
+
+Misalnya
+
+Device
+
+↓
+
+Monitoring History
+
+↓
+
+Alert
+
+↓
+
+Telegram Pair
+
+↓
+
+Settings
+
+Lalu dijelaskan relasinya.
+
+| Diagram           | Menjawab pertanyaan                       | Fokus                    |
+| ----------------- | ----------------------------------------- | ------------------------ |
+| Arsitektur Sistem | Sistem terdiri dari komponen apa saja?    | Struktur sistem          |
+| Use Case Diagram  | Pengguna bisa melakukan apa?              | Fitur                    |
+| Activity Diagram  | Bagaimana alur suatu aktivitas?           | Proses bisnis            |
+| Flowchart         | Bagaimana logika internal sistem bekerja? | Algoritma/proses backend |
+| ERD               | Data disimpan bagaimana?                  | Relasi database          |
+
+ERD VS STRUKTUR DATABASE
+| ERD                                          | Struktur Basis Data                      |
+| -------------------------------------------- | ---------------------------------------- |
+| Menjelaskan hubungan antar tabel             | Menjelaskan isi masing-masing tabel      |
+| Fokus pada relasi                            | Fokus pada atribut/kolom                 |
+| Bentuk diagram                               | Bentuk tabel penjelasan                  |
+| Menjawab "tabel ini berhubungan dengan apa?" | Menjawab "tabel ini menyimpan data apa?" |
