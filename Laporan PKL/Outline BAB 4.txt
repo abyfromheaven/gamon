@@ -91,6 +91,7 @@ Ini menjelaskan alur aktivitas dan menjelaskan proses.
 
 - Activity Monitoring
 - Activity Device Management
+- Alert Management
 
 Activity Diagram cocok untuk proses yang melibatkan pengguna.
 

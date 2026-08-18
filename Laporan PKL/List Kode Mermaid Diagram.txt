@@ -27,30 +27,170 @@ flowchart TB
     BACKEND -- "kirim notifikasi" --> BOTAPI
     BOTAPI -- "pesan notifikasi" --> APPTG
 
-2. Use Case Diagram
-flowchart LR
-    ADMIN["👤 Administrator"]
-    BOT["🤖 Telegram Bot API"]
-
-    subgraph GAMON["Sistem GAMON (Garda Monitoring)"]
-        direction TB
-        UC1["Melihat Dashboard"]
-        UC2["Mengelola Perangkat"]
-        UC3["Memantau Perangkat Real-time"]
-        UC4["Melihat Riwayat Monitoring"]
-        UC5["Melihat Daftar Alert"]
-        UC6["Mengakui Alert"]
-        UC7["Menghubungkan Telegram"]
-        UC8["Mengatur Pengaturan"]
+2. Activity Diagram (Monitoring)
+graph TD
+    subgraph ADMIN["👤 Administrator"]
+        A1["Membuka halaman Monitoring"]
+        A2["Melihat status perangkat real-time"]
+        A3["Melihat notifikasi gangguan di web"]
+        A4["Menerima notifikasi di Telegram"]
     end
 
-    ADMIN --- UC1
-    ADMIN --- UC2
-    ADMIN --- UC3
-    ADMIN --- UC4
-    ADMIN --- UC5
-    ADMIN --- UC6
-    ADMIN --- UC7
-    ADMIN --- UC8
+    subgraph FE["Frontend (React)"]
+        F1["Meminta data status perangkat"]
+        F2["Menampilkan daftar perangkat + status + latensi"]
+        F3["Menerima update via WebSocket"]
+        F4["Menampilkan notifikasi gangguan"]
+    end
 
-    BOT --- UC7
+    subgraph BE["Backend (Golang)"]
+        B1["Mengambil data dari database"]
+        B2["Melakukan pengecekan perangkat secara berkala"]
+        B3{"Perangkat offline?"}
+        B4["Membuat alert"]
+        B5["Mengirim notifikasi ke Telegram Bot API"]
+        B6["Mengirim update status via WebSocket"]
+    end
+
+    subgraph TG["Telegram Bot API"]
+        T1["Menerima data notifikasi"]
+        T2["Mengirim pesan ke aplikasi Telegram"]
+    end
+
+    A1 --> F1 --> B1 --> F2 --> A2
+    B2 --> B3
+    B3 -->|"Ya (offline)"| B4
+    B4 --> B5 --> T1 --> T2 --> A4
+    B4 --> B6 --> F3 --> F4 --> A3
+    B3 -->|"Tidak (online)"| B2
+
+3. Activity Diagram (Device Management)
+graph TD
+    subgraph ADMIN["👤 Administrator"]
+        A1["Membuka halaman Device Management"]
+        A2["Memilih operasi: Tambah / Ubah / Hapus"]
+        A3["Mengisi form data perangkat"]
+        A4["Memilih perangkat + mengubah data"]
+        A5["Memilih perangkat + mengonfirmasi hapus"]
+        A6["Melihat hasil perubahan pada daftar perangkat"]
+    end
+
+    subgraph FE["Frontend (React)"]
+        F1["Menampilkan form / konfirmasi"]
+        F2["Mengirim data ke backend"]
+        F3["Menampilkan konfirmasi berhasil"]
+    end
+
+    subgraph BE["Backend (Golang)"]
+        B1["Memvalidasi input"]
+        B2{"Operasi?"}
+        B3["Menyimpan data perangkat baru"]
+        B4["Memperbarui data perangkat"]
+        B5["Menghapus data perangkat"]
+        B6["Menyesuaikan status monitoring"]
+    end
+
+    subgraph DB["Database (SQLite)"]
+        D1["Menyimpan / memperbarui / menghapus data"]
+    end
+
+    A1 --> A2
+    A2 -->|"Tambah"| A3 --> F1 --> F2 --> B1
+    A2 -->|"Ubah"| A4 --> F1 --> F2 --> B1
+    A2 -->|"Hapus"| A5 --> F1 --> F2 --> B1
+    B1 --> B2
+    B2 -->|"Tambah"| B3 --> D1 --> B6
+    B2 -->|"Ubah"| B4 --> D1 --> B6
+    B2 -->|"Hapus"| B5 --> D1 --> B6
+    B6 --> F3 --> A6
+
+4. Activity Diagram (Alert Management)
+graph TD
+    subgraph ADMIN["👤 Administrator"]
+        A1["Membuka halaman Alert Center"]
+        A2["Memilih alert untuk dilihat"]
+        A3["Menekan tombol Acknowledge"]
+        A4["Melihat status alert berubah"]
+    end
+
+    subgraph FE["Frontend (React)"]
+        F1["Meminta daftar alert ke backend"]
+        F2["Menampilkan daftar alert"]
+        F3["Menampilkan detail alert"]
+        F4["Memperbarui tampilan alert"]
+    end
+
+    subgraph BE["Backend (Golang)"]
+        B1["Mengambil data alert dari database"]
+        B2["Menandai alert sebagai acknowledged"]
+    end
+
+    subgraph DB["Database (SQLite)"]
+        D1["Menyimpan status acknowledged"]
+    end
+
+    A1 --> F1 --> B1 --> F2 --> A2
+    A2 --> F3 --> A3
+    A3 --> B2 --> D1 --> F4 --> A4
+
+5. ERD
+rDiagram
+    devices {
+        int id PK
+        string name
+        string type
+        string ip
+        string url
+        int port
+        string method
+        string location
+        int check_interval
+        string status
+        string description
+        datetime created_at
+        datetime updated_at
+    }
+
+    ping_history {
+        int id PK
+        int device_id FK
+        string status
+        float latency_ms
+        int ttl
+        int seq
+        string details
+        datetime timestamp
+    }
+
+    alerts {
+        int id PK
+        int device_id FK
+        string title
+        string status
+        string severity
+        string alert_type
+        datetime started_at
+        datetime resolved_at
+        string description
+        boolean acknowledged
+        datetime acknowledged_at
+    }
+
+    telegram_pairing {
+        int id PK
+        string token
+        string chat_id
+        string status
+        datetime created_at
+        datetime expires_at
+        datetime paired_at
+    }
+
+    settings {
+        string key PK
+        string value
+        datetime updated_at
+    }
+
+    devices ||--o{ ping_history : "hasil pengecekan"
+    devices ||--o{ alerts : "gangguan"
