@@ -132,42 +132,41 @@ flowchart TD
 
 4. Flowchart Monitoring Engine
 flowchart TD
-    Start([Mulai Pemantauan Device]) --> Ping[Jalankan Pemeriksaan ICMP Ping]
+    A[Mulai Monitoring Engine] --> B[Pantau setiap perangkat secara paralel]
+    B --> C[Mulai siklus pengecekan perangkat]
 
-    Ping --> CekPing{Hasil Ping?}
+    C --> D[Jalankan ICMP Ping ke perangkat]
+    D --> E[Simpan hasil pengecekan ke basis data]
 
-    CekPing -->|Gagal / Tidak Ada Balasan| Offline
-    CekPing -->|Berhasil / Ada Balasan| Online
+    E --> F{Perangkat merespons ping?}
 
-    subgraph ProsesOffline["Proses Device Offline"]
-        Offline[Catat hasil gagal ke database] --> Incr[Tambah penghitung kegagalan]
-        Incr --> CekThreshold{Kegagalan mencapai<br/>threshold?}
-        CekThreshold -->|Belum| Tunggu
-        CekThreshold -->|Ya| CekStatusLama{Status sebelumnya<br/>Online?}
-        CekStatusLama -->|Tidak| Tunggu
-        CekStatusLama -->|Ya| UbahOffline[Ubah status ke Offline]
-        UbahOffline --> BuatAlert[Buat alert baru di database]
-        BuatAlert --> KirimNotifAlert[Kirim notifikasi Telegram<br/>device offline]
-        KirimNotifAlert --> Broadcast1[Broadcast perubahan status<br/>ke semua pengguna web]
-        Broadcast1 --> Tunggu
-    end
+    F -->|Ya| G[Atur ulang penghitung kegagalan menjadi 0]
+    G --> H{Sebelumnya dalam status offline?}
 
-    subgraph ProsesOnline["Proses Device Online"]
-        Online[Catat hasil berhasil ke database] --> Reset[Reset penghitung kegagalan ke 0]
-        Reset --> CekStatusSebelumnya{Status sebelumnya<br/>Offline?}
-        CekStatusSebelumnya -->|Tidak| Tunggu
-        CekStatusSebelumnya -->|Ya| UbahOnline[Ubah status ke Online]
-        UbahOnline --> ResolveAlert[Update alert di database<br/>menjadi resolved]
-        ResolveAlert --> KirimNotifRecovery[Kirim notifikasi Telegram<br/>device kembali online]
-        KirimNotifRecovery --> Broadcast2[Broadcast perubahan status<br/>ke semua pengguna web]
-        Broadcast2 --> Tunggu
-    end
+    F -->|Tidak| I[Tambah penghitung kegagalan sebanyak 1]
+    I --> J{Batas kegagalan tercapai?}
 
-    Tunggu[Tunggu sesuai interval<br/>misalnya 3 detik] --> Ping
+    H -->|Ya| K[Ubah status perangkat menjadi online]
+    K --> L[Tandai alert sebagai selesai]
+    L --> M[Kirim notifikasi ke Telegram]
+    M --> N[Perbarui status di halaman web]
 
-    style Start fill:#4CAF50,color:#fff
-    style ProsesOffline fill:#FFCDD2,stroke:#E53935
-    style ProsesOnline fill:#C8E6C9,stroke:#43A047
+    H -->|Tidak| O[Perbarui hasil pengecekan di halaman web]
+
+    J -->|Tidak| O
+    J -->|Ya| P{Sebelumnya dalam status online?}
+
+    P -->|Ya| Q[Ubah status perangkat menjadi offline]
+    Q --> R[Buat alert baru]
+    R --> S[Kirim notifikasi ke Telegram]
+    S --> T[Perbarui status di halaman web]
+
+    P -->|Tidak| O
+    T --> O
+    N --> O
+
+    O --> U[Tunggu sesuai interval monitoring]
+    U --> D
 
 5. Flowchart CRUD Device
 flowchart TD
