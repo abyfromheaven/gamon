@@ -27,113 +27,7 @@ flowchart TB
     BACKEND -- "kirim notifikasi" --> BOTAPI
     BOTAPI -- "pesan notifikasi" --> APPTG
 
-2. Activity Diagram (Monitoring)
-graph TD
-    subgraph ADMIN["👤 Administrator"]
-        A1["Membuka halaman Monitoring"]
-        A2["Melihat status perangkat real-time"]
-        A3["Melihat notifikasi gangguan di web"]
-        A4["Menerima notifikasi di Telegram"]
-    end
-
-    subgraph FE["Frontend (React)"]
-        F1["Meminta data status perangkat"]
-        F2["Menampilkan daftar perangkat + status + latensi"]
-        F3["Menerima update via WebSocket"]
-        F4["Menampilkan notifikasi gangguan"]
-    end
-
-    subgraph BE["Backend (Golang)"]
-        B1["Mengambil data dari database"]
-        B2["Melakukan pengecekan perangkat secara berkala"]
-        B3{"Perangkat offline?"}
-        B4["Membuat alert"]
-        B5["Mengirim notifikasi ke Telegram Bot API"]
-        B6["Mengirim update status via WebSocket"]
-    end
-
-    subgraph TG["Telegram Bot API"]
-        T1["Menerima data notifikasi"]
-        T2["Mengirim pesan ke aplikasi Telegram"]
-    end
-
-    A1 --> F1 --> B1 --> F2 --> A2
-    B2 --> B3
-    B3 -->|"Ya (offline)"| B4
-    B4 --> B5 --> T1 --> T2 --> A4
-    B4 --> B6 --> F3 --> F4 --> A3
-    B3 -->|"Tidak (online)"| B2
-
-3. Activity Diagram (Device Management)
-graph TD
-    subgraph ADMIN["👤 Administrator"]
-        A1["Membuka halaman Device Management"]
-        A2["Memilih operasi: Tambah / Ubah / Hapus"]
-        A3["Mengisi form data perangkat"]
-        A4["Memilih perangkat + mengubah data"]
-        A5["Memilih perangkat + mengonfirmasi hapus"]
-        A6["Melihat hasil perubahan pada daftar perangkat"]
-    end
-
-    subgraph FE["Frontend (React)"]
-        F1["Menampilkan form / konfirmasi"]
-        F2["Mengirim data ke backend"]
-        F3["Menampilkan konfirmasi berhasil"]
-    end
-
-    subgraph BE["Backend (Golang)"]
-        B1["Memvalidasi input"]
-        B2{"Operasi?"}
-        B3["Menyimpan data perangkat baru"]
-        B4["Memperbarui data perangkat"]
-        B5["Menghapus data perangkat"]
-        B6["Menyesuaikan status monitoring"]
-    end
-
-    subgraph DB["Database (SQLite)"]
-        D1["Menyimpan / memperbarui / menghapus data"]
-    end
-
-    A1 --> A2
-    A2 -->|"Tambah"| A3 --> F1 --> F2 --> B1
-    A2 -->|"Ubah"| A4 --> F1 --> F2 --> B1
-    A2 -->|"Hapus"| A5 --> F1 --> F2 --> B1
-    B1 --> B2
-    B2 -->|"Tambah"| B3 --> D1 --> B6
-    B2 -->|"Ubah"| B4 --> D1 --> B6
-    B2 -->|"Hapus"| B5 --> D1 --> B6
-    B6 --> F3 --> A6
-
-4. Activity Diagram (Alert Management)
-graph TD
-    subgraph ADMIN["👤 Administrator"]
-        A1["Membuka halaman Alert Center"]
-        A2["Memilih alert untuk dilihat"]
-        A3["Menekan tombol Acknowledge"]
-        A4["Melihat status alert berubah"]
-    end
-
-    subgraph FE["Frontend (React)"]
-        F1["Meminta daftar alert ke backend"]
-        F2["Menampilkan daftar alert"]
-        F3["Menampilkan detail alert"]
-        F4["Memperbarui tampilan alert"]
-    end
-
-    subgraph BE["Backend (Golang)"]
-        B1["Mengambil data alert dari database"]
-        B2["Menandai alert sebagai acknowledged"]
-    end
-
-    subgraph DB["Database (SQLite)"]
-        D1["Menyimpan status acknowledged"]
-    end
-
-    A1 --> F1 --> B1 --> F2 --> A2
-    A2 --> F3 --> A3
-    A3 --> B2 --> D1 --> F4 --> A4
-
-5. ERD
+2. ERD
 rDiagram
     devices {
         int id PK
@@ -194,3 +88,205 @@ rDiagram
 
     devices ||--o{ ping_history : "hasil pengecekan"
     devices ||--o{ alerts : "gangguan"
+
+3. Flowchart Inisialisasi Server & Auto Start Monitoring
+flowchart TD
+    Start([Mulai]) --> InitDB[Menginisialisasi Database]
+
+    InitDB --> InitComp[Menginisialisasi Komponen Sistem]
+
+    subgraph Komponen["Komponen yang Diinisialisasi"]
+        K1[WebSocket<br/>Koneksi Real-time]
+        K2[Telegram Bot<br/>Notifikasi]
+        K3[Monitoring Engine<br/>Mesin Pemantau]
+    end
+
+    InitComp --> Komponen
+
+    Komponen --> Register[Daftarkan API Routes<br/>Endpoint yang tersedia]
+
+    Register --> CheckTG{Telegram<br/>Terdaftar?}
+
+    CheckTG -->|Ya| StartPoller[Mulai Polling Telegram<br/>Tiap 2 detik]
+    CheckTG -->|Tidak| SkipPoller[Lewati]
+
+    StartPoller --> AutoStart[Mulai Monitoring Otomatis]
+    SkipPoller --> AutoStart
+
+    subgraph AutoMonitor["Monitoring Otomatis"]
+        AS1[Tunggu 2 detik] --> AS2[Cari Device Aktif<br/>di Database]
+        AS2 --> AS3{Ada Device<br/>Aktif?}
+        AS3 -->|Ya| AS4[Mulai Pemantauan<br/>per Device]
+        AS3 -->|Tidak| AS5[Tidak ada device<br/>yang dipantau]
+    end
+
+    AutoStart --> AutoMonitor
+
+    AutoMonitor --> StartServer[Menjalankan Server<br/>Port 8080]
+
+    StartServer --> Ready([Server Siap<br/>Menerima Koneksi])
+
+    style Start fill:#4CAF50,color:#fff
+    style Ready fill:#4CAF50,color:#fff
+    style CheckTG fill:#FFC107,color:#000
+
+4. Flowchart Monitoring Engine
+flowchart TD
+    Start([Mulai Pemantauan Device]) --> Ping[Jalankan Pemeriksaan ICMP Ping]
+
+    Ping --> CekPing{Hasil Ping?}
+
+    CekPing -->|Gagal / Tidak Ada Balasan| Offline
+    CekPing -->|Berhasil / Ada Balasan| Online
+
+    subgraph ProsesOffline["Proses Device Offline"]
+        Offline[Catat hasil gagal ke database] --> Incr[Tambah penghitung kegagalan]
+        Incr --> CekThreshold{Kegagalan mencapai<br/>threshold?}
+        CekThreshold -->|Belum| Tunggu
+        CekThreshold -->|Ya| CekStatusLama{Status sebelumnya<br/>Online?}
+        CekStatusLama -->|Tidak| Tunggu
+        CekStatusLama -->|Ya| UbahOffline[Ubah status ke Offline]
+        UbahOffline --> BuatAlert[Buat alert baru di database]
+        BuatAlert --> KirimNotifAlert[Kirim notifikasi Telegram<br/>device offline]
+        KirimNotifAlert --> Broadcast1[Broadcast perubahan status<br/>ke semua pengguna web]
+        Broadcast1 --> Tunggu
+    end
+
+    subgraph ProsesOnline["Proses Device Online"]
+        Online[Catat hasil berhasil ke database] --> Reset[Reset penghitung kegagalan ke 0]
+        Reset --> CekStatusSebelumnya{Status sebelumnya<br/>Offline?}
+        CekStatusSebelumnya -->|Tidak| Tunggu
+        CekStatusSebelumnya -->|Ya| UbahOnline[Ubah status ke Online]
+        UbahOnline --> ResolveAlert[Update alert di database<br/>menjadi resolved]
+        ResolveAlert --> KirimNotifRecovery[Kirim notifikasi Telegram<br/>device kembali online]
+        KirimNotifRecovery --> Broadcast2[Broadcast perubahan status<br/>ke semua pengguna web]
+        Broadcast2 --> Tunggu
+    end
+
+    Tunggu[Tunggu sesuai interval<br/>misalnya 3 detik] --> Ping
+
+    style Start fill:#4CAF50,color:#fff
+    style ProsesOffline fill:#FFCDD2,stroke:#E53935
+    style ProsesOnline fill:#C8E6C9,stroke:#43A047
+
+5. Flowchart CRUD Device
+flowchart TD
+    Start([Pengguna Mengakses<br/>Manajemen Device]) --> Pilih[Pilih Aksi]
+
+    Pilih --> Tambah[Tambah Device Baru]
+    Pilih --> Lihat[Lihat Daftar Device]
+    Pilih --> Ubah[Ubah Data Device]
+    Pilih --> Hapus[Hapus Device]
+    Pilih --> Aktifkan[Aktifkan / Nonaktifkan Device]
+
+    subgraph FlowTambah["Tambah Device"]
+        Tambah --> ValidasiTambah{Validasi Input<br/>lengkap?}
+        ValidasiTambah -->|Tidak| ErrorTambah[Kirim pesan error<br/>ke pengguna]
+        ValidasiTambah -->|Ya| SimpanTambah[Simpan device baru<br/>ke database]
+        SimpanTambah --> CekStatusTambah{Status device<br/>adalah active?}
+        CekStatusTambah -->|Ya| StartMonitoring[Mulai pemantauan<br/>otomatis]
+        CekStatusTambah -->|Tidak| ResponTambah[Kirim data device<br/>ke pengguna]
+        StartMonitoring --> ResponTambah
+    end
+
+    subgraph FlowLihat["Lihat Daftar"]
+        Lihat --> QueryLihat[Ambil semua device<br/>dari database]
+        QueryLihat --> ResponLihat[Kirim daftar device<br/>ke pengguna]
+    end
+
+    subgraph FlowUbah["Ubah Data"]
+        Ubah --> AmbilData[Ambil data device saat ini<br/>dari database]
+        AmbilData --> CekAda{Device ditemukan?}
+        CekAda -->|Tidak| ErrorUbah[Kirim pesan error<br/>device tidak ditemukan]
+        CekAda -->|Ya| Gabungkan[Gabungkan data lama<br/>dengan data baru]
+        Gabungkan --> SimpanUbah[Simpan perubahan<br/>ke database]
+        SimpanUbah --> RestartMonitoring[Hentikan pemantauan lama,<br/>mulai dengan konfigurasi baru]
+        RestartMonitoring --> ResponUbah[Kirim data device<br/>yang sudah diperbarui]
+    end
+
+    subgraph FlowHapus["Hapus Device"]
+        Hapus --> HapusDB[Hapus device dari database]
+        HapusDB --> CekHapus{Berhasil terhapus?}
+        CekHapus -->|Tidak| ErrorHapus[Kirim pesan error<br/>device tidak ditemukan]
+        CekHapus -->|Ya| StopHapus[Hentikan pemantauan<br/>untuk device ini]
+        StopHapus --> ResponHapus[Kirim pesan sukses]
+    end
+
+    subgraph FlowToggle["Aktifkan / Nonaktifkan"]
+        Aktifkan --> AmbilStatus[Ambil status saat ini<br/>dari database]
+        AmbilStatus --> CekSama{Status sama<br/>dengan permintaan?}
+        CekSama -->|Ya| ErrorToggle[Kirim pesan error<br/>device sudah aktif/nonaktif]
+        CekSama -->|Tidak| UpdateToggle[Update status di database]
+        UpdateToggle --> CekStatusToggle{Status baru<br/>adalah active?}
+        CekStatusToggle -->|Ya| StartToggle[Mulai pemantauan<br/>dengan konfigurasi device]
+        CekStatusToggle -->|Tidak| StopToggle[Hentikan pemantauan]
+        StartToggle --> ResponToggle[Kirim pesan sukses]
+        StopToggle --> ResponToggle
+    end
+
+    style Start fill:#4CAF50,color:#fff
+    style FlowTambah fill:#E3F2FD,stroke:#1E88E5
+    style FlowLihat fill:#E8F5E9,stroke:#43A047
+    style FlowUbah fill:#FFF3E0,stroke:#FB8C00
+    style FlowHapus fill:#FFEBEE,stroke:#E53935
+    style FlowToggle fill:#F3E5F5,stroke:#8E24AA
+
+6. Flowchart Telegram Pairing
+flowchart TD
+    Start([Pengguna Ingin<br/>Menghubungkan Telegram]) --> SisiWeb
+    Start2([Pengguna Mengirim<br/>Perintah ke Bot Telegram]) --> SisiBot
+
+    subgraph SisiWeb["Sisi Web — Pengguna"]
+        direction TB
+        CekKoneksi{Sudah ada koneksi<br/>Telegram aktif?}
+        CekKoneksi -->|Ya| ErrorWeb[Pesan: Telegram sudah<br/>terhubung]
+        CekKoneksi -->|Tidak| BuatToken[Buat token acak<br/>format GMN-XXXX-XXXX]
+        BuatToken --> SimpanToken[Simpan token ke database<br/>berlaku 30 hari]
+        SimpanToken --> KirimToken[Kirim token ke pengguna<br/>untuk dikirim ke bot]
+
+        LihatStatus[Lihat Status Koneksi] --> QueryStatus[Cari koneksi aktif<br/>di database]
+        QueryStatus --> HasilStatus{Koneksi ditemukan?}
+        HasilStatus -->|Tidak| StatusDis[Status: disconnected]
+        HasilStatus -->|Ya| StatusCon[Status: connected<br/>beserta chat_id dan waktu]
+
+        Putuskan[Putuskan Koneksi] --> UpdateDisconnect[Update status ke disconnected<br/>hapus chat_id]
+        UpdateDisconnect --> CekDisconnect{Berhasil diupdate?}
+        CekDisconnect -->|Tidak| ErrorDisconnect[Pesan: Tidak ada<br/>koneksi aktif]
+        CekDisconnect -->|Ya| SuksesDisconnect[Pesan: Telegram disconnected]
+    end
+
+    subgraph SisiBot["Sisi Bot Telegram — Poller"]
+        direction TB
+        TerimaPesan[Polling: Terima pesan dari pengguna] --> CekJenis{Jenis perintah?}
+
+        CekJenis -->|/pair| ProsesPair
+        CekJenis -->|/status| CekStatusBot
+        CekJenis -->|/help| KirimBantuan
+        CekJenis -->|Pesan lain| Abaikan[Abaikan pesan]
+
+        subgraph ProsesPair["Proses Perintah /pair"]
+            AmbilToken[Ambil token dari pesan] --> CariToken[Cari token di database]
+            CariToken --> TokenValid{Token ditemukan?}
+            TokenValid -->|Tidak| ErrToken1[Pesan: Token tidak ditemukan]
+            TokenValid -->|Ya| CekStatusToken{Status token?}
+            CekStatusToken -->|sudah dipakai| ErrToken2[Pesan: Token sudah digunakan]
+            CekStatusToken -->|sudah kedaluwarsa| ErrToken3[Pesan: Token sudah kedaluwarsa]
+            CekStatusToken -->|pending / valid| SimpanChatID[Simpan chat_id pengguna<br/>update status ke connected]
+            SimpanChatID --> SuksesPair[Pesan: Pairing berhasil!<br/>Telegram sudah terhubung]
+        end
+
+        subgraph CekStatusBot["Proses Perintah /status"]
+            QueryStatusBot[Cek status koneksi<br/>di database] --> StatusAktif{Status aktif?}
+            StatusAktif -->|Ya| KirimStatusAktif[Pesan: Connected<br/>Telegram aktif]
+            StatusAktif -->|Tidak| KirimStatusNonaktif[Pesan: Not Connected<br/>Telegram belum terhubung]
+        end
+
+        subgraph KirimBantuan["Proses Perintah /help"]
+            TampilkanPanduan[Kirim daftar perintah<br/>yang tersedia]
+        end
+    end
+
+    style Start fill:#4CAF50,color:#fff
+    style Start2 fill:#4CAF50,color:#fff
+    style SisiWeb fill:#E3F2FD,stroke:#1E88E5
+    style SisiBot fill:#FFF3E0,stroke:#FB8C00
