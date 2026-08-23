@@ -131,42 +131,72 @@ flowchart TD
     style CheckTG fill:#FFC107,color:#000
 
 4. Flowchart Monitoring Engine
-flowchart TD
-    A[Mulai Monitoring Engine] --> B[Pantau setiap perangkat secara paralel]
-    B --> C[Mulai siklus pengecekan perangkat]
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'lineColor': '#000000',
+    'textColor': '#000000',
+    'edgeLabelBackground': '#ffffff'
+  },
+  "flowchart": {
+    "curve": "linear",
+    "nodeSpacing": 20,
+    "rankSpacing": 35
+  }
+}}%%
+flowchart LR
+    %% Definisi Kelas Node Hitam dengan Teks Putih
+    classDef blackNode fill:#000000,stroke:#000000,stroke-width:1.5px,color:#ffffff;
 
-    C --> D[Jalankan ICMP Ping ke perangkat]
-    D --> E[Simpan hasil pengecekan ke basis data]
+    %% Alur Persiapan & Pengecekan
+    A([<font color=white>Mulai Monitoring Engine</font>]) --> B[<font color=white>Periksa setiap perangkat secara periodik</font>]
+    B --> C[<font color=white>Mulai siklus pengecekan perangkat</font>]
+    C --> D[<font color=white>Jalankan ICMP Ping ke perangkat</font>]
+    D --> E[(<font color=white>Simpan hasil pengecekan ke basis data</font>)]
+    E --> F{<font color=white>Perangkat<br>merespons ping?</font>}
 
-    E --> F{Perangkat merespons ping?}
+    %% ==========================
+    %% JALUR PERANGKAT ONLINE (Ya)
+    %% ==========================
+    F -->|Ya| G[<font color=white>Atur ulang penghitung kegagalan menjadi 0</font>]
+    G --> H{<font color=white>Sebelumnya dalam<br>status offline?</font>}
 
-    F -->|Ya| G[Atur ulang penghitung kegagalan menjadi 0]
-    G --> H{Sebelumnya dalam status offline?}
+    H -->|Ya| I[<font color=white>Ubah status perangkat menjadi online</font>]
+    I --> J[/<font color=white>Tandai alert sebagai selesai</font>/]
+    J --> K[/<font color=white>Kirim notifikasi ke Telegram</font>/]
+    K --> L[/<font color=white>Perbarui status di halaman web</font>/]
+    L --> X
 
-    F -->|Tidak| I[Tambah penghitung kegagalan sebanyak 1]
-    I --> J{Batas kegagalan tercapai?}
+    H -->|Tidak| X[/<font color=white>Perbarui hasil pengecekan di halaman web</font>/]
 
-    H -->|Ya| K[Ubah status perangkat menjadi online]
-    K --> L[Tandai alert sebagai selesai]
-    L --> M[Kirim notifikasi ke Telegram]
-    M --> N[Perbarui status di halaman web]
+    %% ==========================
+    %% JALUR PERANGKAT OFFLINE (Tidak)
+    %% ==========================
+    F -->|Tidak| M[<font color=white>Tambah penghitung kegagalan sebanyak 1</font>]
+    M --> N{<font color=white>Batas kegagalan<br>tercapai?</font>}
 
-    H -->|Tidak| O[Perbarui hasil pengecekan di halaman web]
+    N -->|Ya| O{<font color=white>Sebelumnya dalam<br>status online?</font>}
+    O -->|Ya| P[<font color=white>Ubah status perangkat menjadi offline</font>]
+    P --> Q[/<font color=white>Buat alert baru</font>/]
+    Q --> R[/<font color=white>Kirim notifikasi ke Telegram</font>/]
+    R --> S[/<font color=white>Perbarui status di halaman web</font>/]
+    S --> X
 
-    J -->|Tidak| O
-    J -->|Ya| P{Sebelumnya dalam status online?}
+    O -->|Tidak| X
+    N -->|Tidak| X
 
-    P -->|Ya| Q[Ubah status perangkat menjadi offline]
-    Q --> R[Buat alert baru]
-    R --> S[Kirim notifikasi ke Telegram]
-    S --> T[Perbarui status di halaman web]
+    %% ==========================
+    %% PERULANGAN SIKLUS (LOOPBACK)
+    %% ==========================
+    X --> T[<font color=white>Tunggu interval monitoring</font>]
+    T --> B
 
-    P -->|Tidak| O
-    T --> O
-    N --> O
+    %% Penerapan Kelas Hitam Ke Semua Node
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,X,T blackNode;
 
-    O --> U[Tunggu sesuai interval monitoring]
-    U --> D
+    %% Jalur Panah Hitam dan Teks Percabangan Hitam
+    linkStyle default stroke:#000000,stroke-width:1.5px,color:#000000;
 
 5. Flowchart CRUD Device
 flowchart TD
@@ -230,62 +260,128 @@ flowchart TD
     style FlowHapus fill:#FFEBEE,stroke:#E53935
     style FlowToggle fill:#F3E5F5,stroke:#8E24AA
 
-6. Flowchart Telegram Pairing
+6. Flowchart Telegram Pairing (Sisi Telegram)
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'lineColor': '#000000',
+    'textColor': '#000000',
+    'edgeLabelBackground': '#ffffff',
+    'clusterBkg': 'transparent',
+    'clusterBorder': '#000000'
+  }
+}}%%
+flowchart LR
+    %% Definisi Kelas Node Hitam dengan Teks Putih
+    classDef blackNode fill:#000000,stroke:#000000,stroke-width:1.5px,color:#ffffff;
+
+    %% Alur Utama (Kiri ke Kanan)
+    A([<font color=white>Mulai Poller</font>]) --> B[<font color=white>Polling Telegram API<br>(Setiap 2 Detik)</font>]
+    B --> C{<font color=white>Pesan<br>diterima?</font>}
+
+    C -->|Tidak| B
+    C -->|Ya| D[/<font color=white>Terima pesan Telegram</font>/]
+
+    D --> E{<font color=white>Jenis<br>perintah?</font>}
+
+    %% Kelompok Subgraph Commands (Outline Tebal)
+    subgraph Commands [Group: Commands]
+        direction TB
+        F[/<font color=white>Kirim daftar perintah</font>/]
+        G[/<font color=white>Kirim instruksi unpair</font>/]
+        H[<font color=white>Abaikan pesan</font>]
+        I[<font color=white>Cek status koneksi</font>] --> J[/<font color=white>Kirim status koneksi</font>/]
+    end
+
+    %% Kelompok Subgraph Pair (Outline Tebal)
+    subgraph Pair [Group: Pair]
+        direction TB
+        K[<font color=white>Ekstrak token</font>] --> L[<font color=white>Validasi token</font>]
+        L --> M{<font color=white>Token<br>valid?</font>}
+        M -->|Tidak| N[/<font color=white>Kirim pesan gagal</font>/]
+        M -->|Ya| O[(<font color=white>Simpan Chat ID</font>)] --> P[/<font color=white>Kirim pesan berhasil</font>/]
+    end
+
+    %% Penegasan Outline Tebal Khusus Subgraph/Group
+    style Commands stroke:#000000,stroke-width:3px,fill:none
+    style Pair stroke:#000000,stroke-width:3px,fill:none
+
+    %% Menghubungkan Menu Utama ke Cabang Perintah
+    E -->|/help| F
+    E -->|/unpair| G
+    E -->|Lainnya| H
+    E -->|/status| I
+    E -->|/pair| K
+
+    %% Jalur Kembali ke Polling API
+    F -.-> B
+    G -.-> B
+    H -.-> B
+    J -.-> B
+    N -.-> B
+    P -.-> B
+
+    %% Penerapan Kelas Hitam Ke Semua Node
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P blackNode;
+
+    %% Jalur Panah Hitam dan Teks Percabangan Hitam
+    linkStyle default stroke:#000000,stroke-width:1.5px,color:#000000;
+
+7. Flowchart Telegram Pairing (Sisi Web/Pengguna)
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'primaryStrokeColor': '#000000', 'primaryTextColor': '#000000', 'lineColor': '#000000', 'edgeLabelBackground': 'transparent', 'tertiaryColor': '#ffffff' }}}%%
 flowchart TD
-    Start([Pengguna Ingin<br/>Menghubungkan Telegram]) --> SisiWeb
-    Start2([Pengguna Mengirim<br/>Perintah ke Bot Telegram]) --> SisiBot
+    %% Konfigurasi Gaya: Shape Isi Putih, Garis Hitam, Teks Hitam
+    style A fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style B fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style C fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style D fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style E fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style F fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style G fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style H fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style I fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style J fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style K fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style L fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style M fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style N fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style O fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    style Z fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
 
-    subgraph SisiWeb["Sisi Web — Pengguna"]
-        direction TB
-        CekKoneksi{Sudah ada koneksi<br/>Telegram aktif?}
-        CekKoneksi -->|Ya| ErrorWeb[Pesan: Telegram sudah<br/>terhubung]
-        CekKoneksi -->|Tidak| BuatToken[Buat token acak<br/>format GMN-XXXX-XXXX]
-        BuatToken --> SimpanToken[Simpan token ke database<br/>berlaku 30 hari]
-        SimpanToken --> KirimToken[Kirim token ke pengguna<br/>untuk dikirim ke bot]
+    %% Jalur Panah dan Teks Percabangan Hitam Tanpa Background Kotak
+    linkStyle default stroke:#000000,stroke-width:1.5px,color:#000000;
 
-        LihatStatus[Lihat Status Koneksi] --> QueryStatus[Cari koneksi aktif<br/>di database]
-        QueryStatus --> HasilStatus{Koneksi ditemukan?}
-        HasilStatus -->|Tidak| StatusDis[Status: disconnected]
-        HasilStatus -->|Ya| StatusCon[Status: connected<br/>beserta chat_id dan waktu]
+    %% Alur Diagram dengan Bentuk Standar Sesuai Gambar Referensi Baru
+    A([Mulai: Buka Halaman Settings]) --> B[/Klik Connect Telegram/]
 
-        Putuskan[Putuskan Koneksi] --> UpdateDisconnect[Update status ke disconnected<br/>hapus chat_id]
-        UpdateDisconnect --> CekDisconnect{Berhasil diupdate?}
-        CekDisconnect -->|Tidak| ErrorDisconnect[Pesan: Tidak ada<br/>koneksi aktif]
-        CekDisconnect -->|Ya| SuksesDisconnect[Pesan: Telegram disconnected]
-    end
+    %% Kondisi Awal (Decision)
+    B --> C{Sudah ada<br>pairing aktif?}
+    C -->|Ya| D[/Tampilkan error:<br>Sudah terhubung/]
+    D --> Z([Selesai])
 
-    subgraph SisiBot["Sisi Bot Telegram — Poller"]
-        direction TB
-        TerimaPesan[Polling: Terima pesan dari pengguna] --> CekJenis{Jenis perintah?}
+    %% Proses Pembuatan Token & Database (Menggunakan Simbol Database Silinder)
+    C -->|Tidak| E[Generate token baru]
+    E --> F[(Simpan token ke database)]
+    F --> G[/Tampilkan token ke pengguna/]
 
-        CekJenis -->|/pair| ProsesPair
-        CekJenis -->|/status| CekStatusBot
-        CekJenis -->|/help| KirimBantuan
-        CekJenis -->|Pesan lain| Abaikan[Abaikan pesan]
+    %% Interaksi Pengguna & Bot
+    G --> H[/Pengguna kirim /pair + token ke Bot/]
+    H --> I[Telegram bot memproses pairing]
 
-        subgraph ProsesPair["Proses Perintah /pair"]
-            AmbilToken[Ambil token dari pesan] --> CariToken[Cari token di database]
-            CariToken --> TokenValid{Token ditemukan?}
-            TokenValid -->|Tidak| ErrToken1[Pesan: Token tidak ditemukan]
-            TokenValid -->|Ya| CekStatusToken{Status token?}
-            CekStatusToken -->|sudah dipakai| ErrToken2[Pesan: Token sudah digunakan]
-            CekStatusToken -->|sudah kedaluwarsa| ErrToken3[Pesan: Token sudah kedaluwarsa]
-            CekStatusToken -->|pending / valid| SimpanChatID[Simpan chat_id pengguna<br/>update status ke connected]
-            SimpanChatID --> SuksesPair[Pesan: Pairing berhasil!<br/>Telegram sudah terhubung]
-        end
+    %% Kondisi Validasi Pairing (Decision)
+    I --> J{Pairing<br>berhasil?}
+    J -->|Tidak| K[/Tampilkan error: Gagal/]
+    K --> E
 
-        subgraph CekStatusBot["Proses Perintah /status"]
-            QueryStatusBot[Cek status koneksi<br/>di database] --> StatusAktif{Status aktif?}
-            StatusAktif -->|Ya| KirimStatusAktif[Pesan: Connected<br/>Telegram aktif]
-            StatusAktif -->|Tidak| KirimStatusNonaktif[Pesan: Not Connected<br/>Telegram belum terhubung]
-        end
+    %% Status Connected & Opsi Pengguna
+    J -->|Ya| L[Ubah status menjadi connected]
+    L --> M{Pilihan Pengguna?}
 
-        subgraph KirimBantuan["Proses Perintah /help"]
-            TampilkanPanduan[Kirim daftar perintah<br/>yang tersedia]
-        end
-    end
+    %% Jalur Cek Status
+    M -->|Cek Status| N[/Sistem menampilkan status terhubung/]
+    N --> Z
 
-    style Start fill:#4CAF50,color:#fff
-    style Start2 fill:#4CAF50,color:#fff
-    style SisiWeb fill:#E3F2FD,stroke:#1E88E5
-    style SisiBot fill:#FFF3E0,stroke:#FB8C00
+    %% Jalur Putus Pairing
+    M -->|Putus Pairing| O[Sistem memutus pairing]
+    O --> Z
