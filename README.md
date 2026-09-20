@@ -1,10 +1,10 @@
 <div align="center">
 
-<h1>GAMON</h1>
-<p><strong>Garda Monitoring</strong> — Aplikasi Pemantau Jaringan & Perangkat Berbasis Web</p>
+<h1>GARDA MONITORING (GAMON)</h1>
+<p>Aplikasi Pemantau Jaringan & Perangkat Berbasis Web</p>
 
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.4-green?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.4-green?style=flat-square)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
@@ -26,7 +26,6 @@
 - **Sistem Alert** — Peringatan otomatis dengan level severity (critical, high, medium, low) saat perangkat bermasalah
 - **Notifikasi Telegram** — Kirim peringatan langsung ke Telegram melalui bot, termasuk pairing otomatis
 - **Riwayat Pengecekan** — Simpan dan tampilkan riwayat latensi serta status perangkat dari waktu ke waktu
-- **Multi-Metode Cek** — Mendukung ICMP Ping, TCP Port check, dan HTTP GET request
 - **Konfigurasi Fleksibel** — Atur interval pengecekan, timeout, dan threshold per perangkat
 
 ## Instalasi
@@ -72,9 +71,8 @@ Frontend akan berjalan di `http://localhost:5173` (Vite default).
 
 1. Buka browser dan akses `http://localhost:5173`
 2. Tambahkan perangkat jaringan baru melalui menu **Devices**
-3. Atur metode pengecekan (ICMP Ping, TCP Port, atau HTTP GET) dan interval pengecekan
-4. Pantau status perangkat secara real-time di **Dashboard**
-5. (Opsional) Aktifkan notifikasi Telegram dengan mengatur environment variable `TELEGRAM_BOT_TOKEN`
+3. Pantau status perangkat secara real-time di **Dashboard**
+4. (Opsional) Aktifkan notifikasi Telegram dengan mengatur environment variable `TELEGRAM_BOT_TOKEN`
 
 ## Konfigurasi
 
