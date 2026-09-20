@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MonitorResult, StatusChange } from '../types';
 
+// Custom Hook useWebSocket mengelola koneksi real-time dari browser web (React) ke backend server Go.
+// Hook ini menerima pesan siaran (broadcast) seperti hasil ping baru atau perubahan status online/offline
+// sehingga tampilan web diperbarui secara otomatis tanpa refresh halaman.
+
 function websocketURL(): string {
   const configured = import.meta.env.VITE_WS_URL;
   if (configured) return configured;
@@ -25,17 +29,23 @@ export function useWebSocket(onReconnect?: () => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
 
+  // Menghubungkan ke WebSocket server
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
     const socket = new WebSocket(websocketURL());
 
+    // 1. Saat WebSocket terhubung
     socket.onopen = () => {
       setIsConnected(true);
       onReconnect?.();
     };
+
+    // 2. Memproses pesan masuk dari backend Go
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as { type: string; data: unknown };
+        
+        // Memuat status awal perangkat
         if (message.type === 'initial_state' && Array.isArray(message.data)) {
           const results = message.data.map((item: InitialStateItem) => ({
             device_id: item.device_id,
@@ -50,21 +60,28 @@ export function useWebSocket(onReconnect?: () => void) {
           }));
           setMonitorResults(new Map(results.map((item) => [item.device_id, item])));
         }
+
+        // Memperbarui latensi hasil ping terbaru secara live
         if (message.type === 'check_result') {
           const result = message.data as MonitorResult;
           setMonitorResults((current) => new Map(current).set(result.device_id, result));
         }
+
+        // Menangkap event perubahan status (online <-> offline)
         if (message.type === 'status_change') {
           setLastStatusChange(message.data as StatusChange);
         }
       } catch {
-        // A malformed message must not disconnect the monitoring view.
+        // Mengabaikan format pesan yang salah
       }
     };
+
+    // 3. Saat WebSocket terputus, otomatis mencoba menghubungkan ulang (auto-reconnect) setiap 3 detik
     socket.onclose = () => {
       setIsConnected(false);
       reconnectTimer.current = setTimeout(connect, 3000);
     };
+
     socket.onerror = () => socket.close();
     socketRef.current = socket;
   }, [onReconnect]);

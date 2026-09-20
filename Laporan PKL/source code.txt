@@ -1,0 +1,38 @@
+IMPLEMENTASI BACKEND
+1. main.go
+2. engine.go
+3. ping.go
+4. handler/
+- device.go
+- dashboard.go
+- alert.go
+- settings.go
+- telegram.go
+- monitoring.go
+5. notification/
+- telegram.go
+- poller.go
+
+IMPLEMENTASI DATABASE
+1. database/
+- db.go
+- models.go
+
+IMPLEMENTASI FRONTEND
+1. Pendukung (untuk semua halaman):
+- lib/api.ts
+- hooks/useWebSocket.ts
+2. Dashboard
+- pages/DashboardPage.tsx
+- components/Dashboard.tsx
+3. Device Management
+- pages/DeviceManagementPage.tsx
+- component/DeviceFormModal.tsx
+4. Monitoring
+- pages/MonitoringPage.tsx
+5. Alert Center
+- pages/AlertCenterPage.tsx
+- components/AlertList.tsx
+- components/AlertDetailPanel.tsx
+6. Telegram Settings
+- components/TelegramSettings.tsx
