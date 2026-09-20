@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+frontend/dist/
+
+# Runtime database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Log files
+*.log
+data/monitoring.log
+
+# Binary
+gamon
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Obsidian
+.obsidian/
+
+# AI Agent Skills (development tools)
+.agents/
+.claude/
+agent/
+skills-lock.json
+
+# Testing artifacts
+script-testing/
