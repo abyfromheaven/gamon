@@ -10,6 +10,7 @@ CREATE TABLE devices (
 			check_interval INTEGER DEFAULT 3,
 			status TEXT DEFAULT 'active',
 			description TEXT DEFAULT '',
+			last_online DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
