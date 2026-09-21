@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Laporan PKL/Isi Perancangan Sistem (BAB4).md",
+                "file": "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Network Discovery OS Detection & Target Information.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Isi Perancangan Sistem (BAB4)"
+              "title": "Network Discovery OS Detection & Target Information"
             }
           }
         ]
@@ -80,7 +80,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "a29d5580491e5071",
@@ -184,6 +185,17 @@
   },
   "active": "d3863c80ca24052b",
   "lastOpenFiles": [
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Network Discovery.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Network Discovery OS Detection & Target Information.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Untitled.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Ping & Fping Executor.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Rapikan Monitoring Engine GAMON.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Upgrade Alert & Notification GAMON.md",
+    "Dokumen Gamon (PKL)/Library Ping vs Command Ping OS.md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/TCP Port Monitoring pada GAMON.md",
+    "Laporan PKL/Isi Perancangan Sistem (BAB4).md",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1/Untitled",
+    "Dokumen Gamon (PKL)/Upgrading GAMON H-1",
     "Laporan PKL/BAB 4.md",
     "Laporan PKL/Outline Laporan PKL.md",
     "Checklist Revisi.md",
