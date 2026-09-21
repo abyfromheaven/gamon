@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSettings, updateSettings, type AppSettings } from '../lib/api';
+import { audioAlert } from '../lib/audioAlert';
+import { getDesktopNotificationPermissionStatus, requestDesktopNotificationPermission } from '../lib/desktopNotify';
+import { getNotificationClientSettings, saveNotificationClientSettings, type NotificationClientSettings } from '../lib/notificationSettings';
 
 export function MonitoringSettings() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [clientSettings, setClientSettings] = useState<NotificationClientSettings>(getNotificationClientSettings());
+  const [desktopPermission, setDesktopPermission] = useState(getDesktopNotificationPermissionStatus());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingAudio, setTestingAudio] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -20,7 +26,28 @@ export function MonitoringSettings() {
     }
   }, []);
 
-  useEffect(() => { void loadSettings(); }, [loadSettings]);
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  const handleClientSettingChange = (key: keyof NotificationClientSettings, value: boolean | number) => {
+    const updated = saveNotificationClientSettings({ [key]: value });
+    setClientSettings(updated);
+    if (key === 'volume') {
+      audioAlert.setVolume(value as number);
+    }
+  };
+
+  const handleTestAudio = async () => {
+    setTestingAudio(true);
+    await audioAlert.playTestSound();
+    setTestingAudio(false);
+  };
+
+  const handleRequestPermission = async () => {
+    const perm = await requestDesktopNotificationPermission();
+    setDesktopPermission(perm);
+  };
 
   const handleSave = async () => {
     if (!settings) return;
@@ -88,6 +115,119 @@ export function MonitoringSettings() {
           {settings.failure_threshold >= 4 && settings.failure_threshold <= 5 && 'Sedikit sabar — alert saat gagal beberapa kali'}
           {settings.failure_threshold > 5 && 'Santai — butuh banyak kegagalan sebelum alert'}
         </p>
+      </div>
+
+      <hr className="border-border/50" />
+
+      {/* Emergency Alert Settings */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+            <span>🚨 Peringatan Darurat & Audio Alert</span>
+          </h3>
+          <p className="text-xs text-text-muted mt-1">
+            Pengaturan notifikasi darurat langsung ketika status perangkat berubah menjadi Offline.
+          </p>
+        </div>
+
+        {/* Toggle Block Screen Modal */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-bg/50 border border-border/50">
+          <div>
+            <span className="text-sm font-medium text-text-primary block">Block Screen Modal Darurat</span>
+            <span className="text-xs text-text-muted block">Tampilkan pop-up dialog merah di tengah layar (Default: Aktif)</span>
+          </div>
+          <button
+            onClick={() => handleClientSettingChange('blockScreenEnabled', !clientSettings.blockScreenEnabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+              clientSettings.blockScreenEnabled ? 'bg-danger' : 'bg-surface-elevated'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                clientSettings.blockScreenEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Toggle Siren Audio */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-bg/50 border border-border/50">
+          <div>
+            <span className="text-sm font-medium text-text-primary block">Suara Alarm Sirine</span>
+            <span className="text-xs text-text-muted block">Bunyikan suara sirine darurat berulang sampai di-acknowledge (Default: Aktif)</span>
+          </div>
+          <button
+            onClick={() => handleClientSettingChange('soundAlarmEnabled', !clientSettings.soundAlarmEnabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+              clientSettings.soundAlarmEnabled ? 'bg-danger' : 'bg-surface-elevated'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                clientSettings.soundAlarmEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Test Sound & Audio Volume */}
+        {clientSettings.soundAlarmEnabled && (
+          <div className="p-3 rounded-lg bg-surface/50 border border-border/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-secondary">Volume Audio:</span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.1}
+                value={clientSettings.volume}
+                onChange={(e) => handleClientSettingChange('volume', parseFloat(e.target.value))}
+                className="w-32 h-1.5 bg-surface-elevated rounded-lg appearance-none cursor-pointer accent-accent"
+              />
+            </div>
+            <button
+              onClick={() => void handleTestAudio()}
+              disabled={testingAudio}
+              className="w-full py-2 px-3 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              {testingAudio ? '🔔 Membunyikan Tes Suara...' : '🔊 Tes Suara Alarm (Tes Audio)'}
+            </button>
+          </div>
+        )}
+
+        {/* Desktop Push Notification Status (Mandatory Alert) */}
+        <div className="p-3 rounded-lg bg-bg/50 border border-border/50 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-text-primary block">Desktop Push Notification (OS)</span>
+              <span className="text-xs text-text-muted block">Alert Minimal Wajib (Notifikasi OS Windows/Linux/macOS)</span>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                desktopPermission === 'granted'
+                  ? 'bg-success/15 text-success border-success/30'
+                  : desktopPermission === 'denied'
+                    ? 'bg-danger/15 text-danger border-danger/30'
+                    : 'bg-warning/15 text-warning border-warning/30'
+              }`}
+            >
+              {desktopPermission === 'granted'
+                ? 'Aktif / Izinkan'
+                : desktopPermission === 'denied'
+                  ? 'Ditolak Browser'
+                  : 'Belum Diizinkan'}
+            </span>
+          </div>
+
+          {desktopPermission !== 'granted' && (
+            <button
+              onClick={() => void handleRequestPermission()}
+              className="mt-1 w-full py-2 px-3 rounded-md bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              🖥️ Minta Izin Desktop Push Notification Browser
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Save Button */}

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertBanner, type AlertBannerData } from './AlertBanner';
+import { EmergencyAlertModal } from './EmergencyAlertModal';
 import type { StatusChange } from '../types';
+import { audioAlert } from '../lib/audioAlert';
+import { sendDesktopNotification, startTabTitleFlash, stopTabTitleFlash } from '../lib/desktopNotify';
+import { getNotificationClientSettings } from '../lib/notificationSettings';
 
 interface AlertBannerContainerProps {
   statusChange: StatusChange | null;
@@ -25,6 +29,24 @@ export function AlertBannerContainer({ statusChange, onNavigateToMonitoring }: A
       timestamp: statusChange.timestamp,
     };
 
+    // 1. Mandatory Alert: Native Desktop Push Notification & Tab Title Flash
+    const isOffline = statusChange.new_status === 'offline';
+    if (isOffline) {
+      sendDesktopNotification(
+        `🚨 PERINGATAN CRITICAL: ${statusChange.device_name} OFFLINE!`,
+        `Perangkat ${statusChange.device_name} berubah status dari ${statusChange.old_status} menjadi ${statusChange.new_status}.`
+      );
+      startTabTitleFlash(`${statusChange.device_name} OFFLINE`);
+    }
+
+    // 2. Read user settings for Sound Alarm & Block Screen Modal
+    const settings = getNotificationClientSettings();
+
+    if (isOffline && settings.soundAlarmEnabled) {
+      audioAlert.setVolume(settings.volume);
+      audioAlert.startSiren();
+    }
+
     setCurrent((prev) => {
       if (!prev) return banner;
       setQueue((q) => {
@@ -36,6 +58,10 @@ export function AlertBannerContainer({ statusChange, onNavigateToMonitoring }: A
   }, [statusChange]);
 
   const dismiss = useCallback(() => {
+    // Stop siren sound & tab title flashing when alert is acknowledged/dismissed
+    audioAlert.stopSiren();
+    stopTabTitleFlash();
+
     setCurrent(null);
     setQueue((prev) => {
       const next = [...prev];
@@ -53,11 +79,27 @@ export function AlertBannerContainer({ statusChange, onNavigateToMonitoring }: A
 
   if (!current) return null;
 
+  const clientSettings = getNotificationClientSettings();
+  const isOffline = current.new_status === 'offline';
+  const showBlockScreenModal = isOffline && clientSettings.blockScreenEnabled;
+
   return (
-    <AlertBanner
-      data={current}
-      onDetail={onNavigateToMonitoring}
-      onDismiss={dismiss}
-    />
+    <>
+      {showBlockScreenModal ? (
+        <EmergencyAlertModal
+          data={current}
+          onAcknowledge={() => {
+            onNavigateToMonitoring(current.device_id);
+            dismiss();
+          }}
+        />
+      ) : (
+        <AlertBanner
+          data={current}
+          onDetail={onNavigateToMonitoring}
+          onDismiss={dismiss}
+        />
+      )}
+    </>
   );
 }
