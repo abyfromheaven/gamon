@@ -33,7 +33,7 @@ function App() {
         </div>
 
         <main className="flex-1 overflow-auto">
-          {currentPage === 'dashboard' && <DashboardPage monitorResults={monitorResults} onNavigate={setCurrentPage} isConnected={isConnected} reconnectKey={reconnectKey} />}
+          {currentPage === 'dashboard' && <DashboardPage monitorResults={monitorResults} onNavigate={setCurrentPage} isConnected={isConnected} reconnectKey={reconnectKey} lastStatusChange={lastStatusChange} />}
           {currentPage === 'devices' && <DeviceManagementPage />}
           {currentPage === 'monitoring' && <MonitoringPage monitorResults={monitorResults} onViewAlerts={() => setCurrentPage('alerts')} reconnectKey={reconnectKey} />}
           {currentPage === 'alerts' && <AlertCenterPage lastStatusChange={lastStatusChange} setAlertCount={setAlertCount} />}

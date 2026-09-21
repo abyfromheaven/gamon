@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dashboard, MonitoringRecord } from '../lib/api';
 import { fetchDashboard, fetchMonitoring } from '../lib/api';
 import { presentAlert } from '../lib/presenters';
-import type { DashboardData, MonitorResult } from '../types';
+import type { DashboardData, MonitorResult, StatusChange } from '../types';
 import type { Page } from '../components/Sidebar';
 import { MetricsGrid } from '../components/MetricsGrid';
 import { LatestAlerts } from '../components/LatestAlerts';
@@ -14,9 +14,10 @@ interface DashboardPageProps {
   onNavigate: (page: Page) => void;
   isConnected: boolean;
   reconnectKey: number;
+  lastStatusChange?: StatusChange | null;
 }
 
-export function DashboardPage({ monitorResults, onNavigate, isConnected, reconnectKey }: DashboardPageProps) {
+export function DashboardPage({ monitorResults, onNavigate, isConnected, reconnectKey, lastStatusChange }: DashboardPageProps) {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [monitoring, setMonitoring] = useState<MonitoringRecord[]>([]);
   const [logs, setLogs] = useState<EngineLogEntry[]>(() => {
@@ -51,6 +52,11 @@ export function DashboardPage({ monitorResults, onNavigate, isConnected, reconne
   useEffect(() => {
     void load();
   }, [reconnectKey]);
+
+  useEffect(() => {
+    if (!lastStatusChange) return;
+    void load();
+  }, [lastStatusChange]);
 
   useEffect(() => {
     try {
