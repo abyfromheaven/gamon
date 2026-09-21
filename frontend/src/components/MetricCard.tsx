@@ -23,17 +23,19 @@ const borderColors = {
 export function MetricCard({ value, label, sublabel, accent = 'default', delay = 0 }: MetricCardProps) {
   return (
     <div
-      className={`animate-fade-in-up anim-delay-${delay} bg-surface border ${borderColors[accent]} rounded-xl p-5 lg:p-6 transition-colors duration-200 hover:bg-surface-elevated`}
+      className={`animate-fade-in-up anim-delay-${delay} bg-surface border ${borderColors[accent]} rounded-lg px-3 py-2 transition-colors duration-200 hover:bg-surface-elevated flex items-center justify-between`}
     >
-      <p className={`font-mono text-4xl lg:text-5xl font-bold tracking-tight ${accentColors[accent]}`}>
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-text-secondary font-medium">
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-[9px] text-text-muted">{sublabel}</p>
+        )}
+      </div>
+      <p className={`font-mono text-xl lg:text-2xl font-bold tracking-tight ${accentColors[accent]}`}>
         {value}
       </p>
-      <p className="mt-2 text-xs uppercase tracking-widest text-text-secondary font-medium">
-        {label}
-      </p>
-      {sublabel && (
-        <p className="mt-1 text-xs text-text-muted">{sublabel}</p>
-      )}
     </div>
   );
 }
