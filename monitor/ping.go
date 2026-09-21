@@ -58,27 +58,47 @@ func PingOnce(ip string, seq int) CheckResult {
 	// Membaca baris demi baris teks hasil respon ping terminal
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		line = strings.TrimSpace(line)
-		if !strings.Contains(line, "icmp_seq=") {
+		
+		// Cek apakah baris menandakan balasan ping (Linux atau Windows English/Indonesian)
+		isReply := strings.Contains(line, "icmp_seq=") ||
+			strings.Contains(line, "Reply from") ||
+			strings.Contains(line, "Balasan dari") ||
+			(strings.Contains(line, "time=") && strings.Contains(line, "TTL=")) ||
+			(strings.Contains(line, "waktu=") && strings.Contains(line, "TTL="))
+
+		if !isReply {
 			continue
 		}
 
-		// Jika ditemukan teks 'icmp_seq=', berarti perangkat merespon (online)
+		// Jika ditemukan tanda balasan, berarti perangkat merespon (online)
 		result.Status = StatusOnline
 		for _, field := range strings.Fields(line) {
+			field = strings.Trim(field, ",")
+			if strings.HasPrefix(field, "time<") || strings.HasPrefix(field, "waktu<") {
+				result.LatencyMs = 0.5
+				continue
+			}
+
 			kv := strings.SplitN(field, "=", 2)
 			if len(kv) != 2 {
 				continue
 			}
-			switch kv[0] {
+			
+			key := strings.ToLower(kv[0])
+			val := strings.TrimSuffix(strings.TrimSuffix(kv[1], "ms"), "s")
+
+			switch key {
 			case "ttl":
 				// Ambil nilai TTL dari baris respon
-				if value, err := strconv.Atoi(kv[1]); err == nil {
+				if value, err := strconv.Atoi(val); err == nil {
 					result.TTL = value
 					result.Details["ttl"] = value
 				}
-			case "time":
+			case "time", "waktu":
 				// Ambil nilai waktu latensi (ms) dari baris respon
-				if value, err := strconv.ParseFloat(kv[1], 64); err == nil {
+				if strings.HasPrefix(val, "<") {
+					result.LatencyMs = 0.5
+				} else if value, err := strconv.ParseFloat(val, 64); err == nil {
 					result.LatencyMs = value
 				}
 			}
