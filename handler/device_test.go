@@ -54,7 +54,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 			device_id INTEGER NOT NULL,
 			title TEXT NOT NULL,
 			status TEXT DEFAULT 'ongoing',
-			severity TEXT DEFAULT 'low',
 			started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			resolved_at DATETIME,
 			description TEXT DEFAULT ''

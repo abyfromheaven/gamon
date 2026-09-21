@@ -1,5 +1,4 @@
 import type { Alert } from '../types';
-import { SeverityBadge } from './SeverityBadge';
 
 interface AlertDetailPanelProps {
   alert: Alert | null;
@@ -39,7 +38,6 @@ export function AlertDetailPanel({ alert, onClose, onMarkResolved, onAcknowledge
           {/* Title + Status */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <SeverityBadge severity={alert.severity} size="md" />
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
                 alert.status === 'ongoing' ? 'text-danger' : 'text-success'
               }`}>

@@ -40,7 +40,6 @@ type Alert struct {
 	DeviceID       int        `json:"device_id"`       // ID perangkat bermasalah
 	Title          string     `json:"title"`           // Judul peringatan (contoh: Perangkat Tidak Merespon)
 	Status         string     `json:"status"`          // Status peringatan (ongoing / resolved)
-	Severity       string     `json:"severity"`        // Tingkat bahaya (critical / high / medium / low)
 	AlertType      string     `json:"alert_type"`      // Jenis peringatan
 	StartedAt      time.Time  `json:"started_at"`      // Waktu mulai terjadi masalah
 	ResolvedAt     *time.Time `json:"resolved_at"`     // Waktu masalah berhasil teratasi (opsional)

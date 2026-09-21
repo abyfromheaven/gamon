@@ -1,12 +1,10 @@
-import type { AlertStatus, AlertSeverity, DeviceType } from '../types';
+import type { AlertStatus, DeviceType } from '../types';
 
 interface AlertFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   statusFilter: AlertStatus | 'all';
   onStatusFilterChange: (status: AlertStatus | 'all') => void;
-  severityFilter: AlertSeverity | 'all';
-  onSeverityFilterChange: (severity: AlertSeverity | 'all') => void;
   deviceTypeFilter: DeviceType | 'all';
   onDeviceTypeFilterChange: (type: DeviceType | 'all') => void;
 }
@@ -15,11 +13,6 @@ const statusOptions: { value: AlertStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All Status' },
   { value: 'ongoing', label: 'Ongoing' },
   { value: 'resolved', label: 'Resolved' },
-];
-
-const severityOptions: { value: AlertSeverity | 'all'; label: string }[] = [
-  { value: 'all', label: 'All Severity' },
-  { value: 'critical', label: 'Critical' },
 ];
 
 const deviceTypeOptions: { value: DeviceType | 'all'; label: string }[] = [
@@ -36,8 +29,6 @@ export function AlertFilters({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
-  severityFilter,
-  onSeverityFilterChange,
   deviceTypeFilter,
   onDeviceTypeFilterChange,
 }: AlertFiltersProps) {
@@ -71,16 +62,6 @@ export function AlertFilters({
           className="px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text-secondary focus:outline-none focus:border-accent/50 transition-colors cursor-pointer"
         >
           {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-
-        <select
-          value={severityFilter}
-          onChange={(e) => onSeverityFilterChange(e.target.value as AlertSeverity | 'all')}
-          className="px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text-secondary focus:outline-none focus:border-accent/50 transition-colors cursor-pointer"
-        >
-          {severityOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>

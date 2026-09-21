@@ -30,7 +30,6 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		ID         int    `json:"id"`
 		DeviceName string `json:"device_name"`
 		Title      string `json:"title"`
-		Severity   string `json:"severity"`
 		Status     string `json:"status"`
 		StartedAt  string `json:"started_at"`
 	}
@@ -66,7 +65,7 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		log.Printf("Error counting offline devices: %v", err)
 	}
 
-	rows, err := h.db.Query(`SELECT a.id, d.name, a.title, a.severity, a.status, a.started_at
+	rows, err := h.db.Query(`SELECT a.id, d.name, a.title, a.status, a.started_at
 		FROM alerts a
 		JOIN devices d ON a.device_id = d.id
 		ORDER BY a.started_at DESC
@@ -82,7 +81,7 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 	for rows.Next() {
 		var a LatestAlert
 		var startedAt string
-		if err := rows.Scan(&a.ID, &a.DeviceName, &a.Title, &a.Severity, &a.Status, &startedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.DeviceName, &a.Title, &a.Status, &startedAt); err != nil {
 			log.Printf("Error scanning alert: %v", err)
 			continue
 		}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Device, DeviceInput, DeviceType } from '../lib/api';
+import type { Device, DeviceInput } from '../lib/api';
 import { createDevice, deleteDevice, fetchDevices, updateDevice, toggleDeviceStatus } from '../lib/api';
 import { PageHeader } from '../components/PageHeader';
 import { SearchBar } from '../components/SearchBar';
@@ -7,7 +7,7 @@ import { DeviceTable } from '../components/DeviceTable';
 import { DeviceFormModal } from '../components/DeviceFormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-type FilterType = 'All' | DeviceType;
+type FilterType = 'All' | string;
 
 export function DeviceManagementPage() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -87,6 +87,11 @@ export function DeviceManagementPage() {
 
   const active = devices.filter((device) => device.status === 'active').length;
 
+  const availableTypes = useMemo(() => {
+    const types = new Set(devices.map((d) => d.type));
+    return Array.from(types).sort();
+  }, [devices]);
+
   return (
     <div className="min-h-full">
       <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-6 lg:py-8">
@@ -102,7 +107,7 @@ export function DeviceManagementPage() {
             {toast}
           </div>
         )}
-        <SearchBar search={search} onSearchChange={setSearch} activeFilter={filter} onFilterChange={setFilter} />
+        <SearchBar search={search} onSearchChange={setSearch} activeFilter={filter} onFilterChange={setFilter} availableTypes={availableTypes} />
         <DeviceTable
           devices={filtered}
           onEdit={(device) => { setEditing(device); setFormOpen(true); }}

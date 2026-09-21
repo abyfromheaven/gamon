@@ -1,5 +1,4 @@
 import type { Alert } from '../types';
-import { SeverityBadge } from './SeverityBadge';
 
 interface AlertListProps {
   alerts: Alert[];
@@ -29,7 +28,6 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
               <th className="text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider px-5 py-3">Alert</th>
               <th className="text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider px-5 py-3">Device</th>
               <th className="text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider px-5 py-3">Status</th>
-              <th className="text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider px-5 py-3">Severity</th>
               <th className="text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider px-5 py-3">Started</th>
             </tr>
           </thead>
@@ -74,9 +72,6 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <SeverityBadge severity={alert.severity} />
-                  </td>
-                  <td className="px-5 py-3.5">
                     <span className="text-xs text-text-muted font-mono">{alert.startTime}</span>
                   </td>
                 </tr>
@@ -106,7 +101,6 @@ export function AlertList({ alerts, selectedAlert, onSelectAlert }: AlertListPro
                   </div>
                   <p className="text-xs text-text-muted font-mono mt-0.5 ml-3.5">{alert.device}</p>
                 </div>
-                <SeverityBadge severity={alert.severity} />
               </div>
               <div className="flex items-center justify-between ml-3.5">
                 <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${

@@ -286,8 +286,8 @@ func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
 
 // createAlert mencatat peristiwa perangkat mati ke tabel alerts.
 func (e *Engine) createAlert(deviceID int) {
-	_, err := e.db.Exec(`INSERT INTO alerts (device_id, title, status, severity, description)
-		VALUES (?, 'Perangkat Tidak Merespon (Offline)', 'ongoing', 'critical', 'Perangkat tidak membalas ICMP Ping')`, deviceID)
+	_, err := e.db.Exec(`INSERT INTO alerts (device_id, title, status, description)
+		VALUES (?, 'Perangkat Tidak Merespon (Offline)', 'ongoing', 'Perangkat tidak membalas ICMP Ping')`, deviceID)
 	if err != nil {
 		log.Printf("Gagal membuat catatan alert untuk perangkat %d: %v", deviceID, err)
 	}

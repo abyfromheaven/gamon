@@ -7,7 +7,6 @@ export type DeviceMethod = 'ICMP Ping' | 'HTTP Check' | 'TCP Port';
 export type DeviceStatus = 'active' | 'inactive';
 export type MonitorStatus = 'online' | 'offline' | 'unknown';
 export type AlertStatus = 'ongoing' | 'resolved';
-export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical' | 'info';
 
 export interface Device {
   id: number;
@@ -49,7 +48,6 @@ export interface Alert {
   method: DeviceMethod;
   title: string;
   status: AlertStatus;
-  severity: AlertSeverity;
   started_at: string;
   resolved_at: string | null;
   description: string;
@@ -59,7 +57,6 @@ export interface Alert {
 
 export interface AlertFilters {
   status?: AlertStatus;
-  severity?: AlertSeverity;
   device_type?: DeviceType;
 }
 
@@ -73,7 +70,6 @@ export interface DashboardAlert {
   id: number;
   device_name: string;
   title: string;
-  severity: AlertSeverity;
   status: AlertStatus;
   started_at: string;
 }

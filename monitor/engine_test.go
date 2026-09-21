@@ -29,7 +29,7 @@ func TestEngine_ThreeOfflineChecksCreateAlertAndRecoveryResolvesIt(t *testing.T)
 	for _, query := range []string{
 		`CREATE TABLE devices (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`,
 		`CREATE TABLE ping_history (device_id INTEGER, status TEXT, latency_ms REAL, ttl INTEGER, seq INTEGER, details TEXT, timestamp DATETIME)`,
-		`CREATE TABLE alerts (device_id INTEGER, title TEXT, status TEXT, severity TEXT, description TEXT, resolved_at DATETIME, acknowledged BOOLEAN DEFAULT FALSE, acknowledged_at DATETIME)`,
+		`CREATE TABLE alerts (device_id INTEGER, title TEXT, status TEXT, description TEXT, resolved_at DATETIME, acknowledged BOOLEAN DEFAULT FALSE, acknowledged_at DATETIME)`,
 	} {
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)
@@ -49,16 +49,16 @@ func TestEngine_ThreeOfflineChecksCreateAlertAndRecoveryResolvesIt(t *testing.T)
 	}))
 	config := DeviceConfig{DeviceID: 1, IP: "192.168.1.1", Method: "ICMP Ping"}
 
-	// 3x offline → should create 1 critical alert
+	// 3x offline → should create 1 alert
 	for seq := 1; seq <= 3; seq++ {
 		engine.runCheck(config, seq)
 	}
 	var ongoing int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM alerts WHERE status = 'ongoing' AND severity = 'critical'`).Scan(&ongoing); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM alerts WHERE status = 'ongoing'`).Scan(&ongoing); err != nil {
 		t.Fatal(err)
 	}
 	if ongoing != 1 {
-		t.Fatalf("ongoing critical alerts = %d, want 1", ongoing)
+		t.Fatalf("ongoing alerts = %d, want 1", ongoing)
 	}
 
 	// 1x online → should auto-resolve the alert (no recovery alert created)

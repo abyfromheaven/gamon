@@ -85,7 +85,6 @@ func migrate(db *sql.DB) error {
 			device_id INTEGER NOT NULL,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'ongoing',
-			severity TEXT NOT NULL DEFAULT 'low',
 			started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			resolved_at DATETIME,
 			description TEXT DEFAULT '',

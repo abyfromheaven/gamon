@@ -23,7 +23,7 @@
 - **ICMP Ping Monitoring** — Mendeteksi ketersediaan dan latensi perangkat menggunakan ICMP ping
 - **Dashboard Ringkas** — Ringkasan jumlah perangkat online, offline, dan warning dalam satu tampilan
 - **Manajemen Perangkat** — Tambah, edit, dan hapus perangkat jaringan yang ingin dipantau
-- **Sistem Alert** — Peringatan otomatis dengan level severity (critical, high, medium, low) saat perangkat bermasalah
+- **Sistem Alert** — Peringatan otomatis saat perangkat bermasalah (offline)
 - **Notifikasi Telegram** — Kirim peringatan langsung ke Telegram melalui bot, termasuk pairing otomatis
 - **Riwayat Pengecekan** — Simpan dan tampilkan riwayat latensi serta status perangkat dari waktu ke waktu
 - **Konfigurasi Fleksibel** — Atur interval pengecekan, timeout, dan threshold per perangkat

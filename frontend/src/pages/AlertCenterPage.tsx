@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchAlerts, resolveAlert, acknowledgeAlert, fetchAlertCount } from '../lib/api';
 import { presentAlert } from '../lib/presenters';
-import type { Alert, AlertStatus, AlertSeverity, DeviceType, StatusChange } from '../types';
+import type { Alert, AlertStatus, DeviceType, StatusChange } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { AlertSummaryCards } from '../components/AlertSummaryCards';
 import { AlertFilters } from '../components/AlertFilters';
@@ -17,7 +17,6 @@ export function AlertCenterPage({ lastStatusChange, setAlertCount }: {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<AlertStatus | 'all'>('all');
-  const [severity, setSeverity] = useState<AlertSeverity | 'all'>('all');
   const [deviceType, setDeviceType] = useState<DeviceType | 'all'>('all');
 
   const load = useCallback(async () => {
@@ -26,7 +25,6 @@ export function AlertCenterPage({ lastStatusChange, setAlertCount }: {
       const [data, countData] = await Promise.all([
         fetchAlerts({
           ...(status !== 'all' && { status }),
-          ...(severity !== 'all' && { severity }),
           ...(deviceType !== 'all' && { device_type: deviceType }),
         }),
         fetchAlertCount(),
@@ -36,7 +34,7 @@ export function AlertCenterPage({ lastStatusChange, setAlertCount }: {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat alert.');
     }
-  }, [status, severity, deviceType, setAlertCount]);
+  }, [status, deviceType, setAlertCount]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (lastStatusChange) void load(); }, [lastStatusChange, load]);
@@ -68,7 +66,7 @@ export function AlertCenterPage({ lastStatusChange, setAlertCount }: {
       <PageHeader title="Alert Center" subtitle="Monitor and track all system alerts and incidents" />
       {error && <p className="rounded bg-danger-muted p-3 text-sm text-danger">{error}</p>}
       <AlertSummaryCards alerts={alerts} />
-      <AlertFilters searchQuery={search} onSearchChange={setSearch} statusFilter={status} onStatusFilterChange={setStatus} severityFilter={severity} onSeverityFilterChange={setSeverity} deviceTypeFilter={deviceType} onDeviceTypeFilterChange={setDeviceType} />
+      <AlertFilters searchQuery={search} onSearchChange={setSearch} statusFilter={status} onStatusFilterChange={setStatus} deviceTypeFilter={deviceType} onDeviceTypeFilterChange={setDeviceType} />
       <div className="text-xs text-text-muted font-mono">Showing {filtered.length} of {alerts.length} alerts</div>
       <AlertList alerts={filtered} selectedAlert={selected} onSelectAlert={setSelected} />
       <AlertDetailPanel alert={selected} onClose={() => setSelected(null)} onMarkResolved={(id) => void markResolved(id)} onAcknowledge={(id) => void markAcknowledged(id)} />

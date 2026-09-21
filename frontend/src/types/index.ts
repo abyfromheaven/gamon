@@ -1,12 +1,10 @@
 import type {
-  AlertSeverity as APIAlertSeverity,
   AlertStatus as APIAlertStatus,
   DeviceType as APIDeviceType,
   MonitorStatus,
 } from '../lib/api';
 
 export type DeviceType = APIDeviceType;
-export type AlertSeverity = APIAlertSeverity;
 export type AlertStatus = APIAlertStatus;
 
 export interface PingResult {
@@ -38,7 +36,6 @@ export interface Alert {
   device: string;
   deviceType: DeviceType;
   status: AlertStatus;
-  severity: AlertSeverity;
   startTime: string;
   resolvedTime: string | null;
   description: string;

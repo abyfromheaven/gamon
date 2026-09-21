@@ -24,7 +24,6 @@ export function presentAlert(alert: APIAlert | DashboardAlert): Alert {
     device: alert.device_name,
     deviceType,
     status: alert.status,
-    severity: alert.severity,
     startTime: formatDateTime(alert.started_at) ?? alert.started_at,
     resolvedTime: formatDateTime(resolvedAt),
     description,

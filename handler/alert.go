@@ -63,7 +63,7 @@ func (h *AlertHandler) HandleAlert(w http.ResponseWriter, r *http.Request) {
 
 func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT a.id, a.device_id, d.name, d.type, d.ip, d.method,
-		a.title, a.status, a.severity,
+		a.title, a.status,
 		a.started_at, a.resolved_at, a.description,
 		a.acknowledged, a.acknowledged_at
 		FROM alerts a
@@ -74,10 +74,6 @@ func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 	if status := r.URL.Query().Get("status"); status != "" {
 		query += " AND a.status = ?"
 		args = append(args, status)
-	}
-	if severity := r.URL.Query().Get("severity"); severity != "" {
-		query += " AND a.severity = ?"
-		args = append(args, severity)
 	}
 	if deviceType := r.URL.Query().Get("device_type"); deviceType != "" {
 		query += " AND d.type = ?"
@@ -103,7 +99,6 @@ func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 		Method         string  `json:"method"`
 		Title          string  `json:"title"`
 		Status         string  `json:"status"`
-		Severity       string  `json:"severity"`
 		StartedAt      string  `json:"started_at"`
 		ResolvedAt     *string `json:"resolved_at"`
 		Description    string  `json:"description"`
@@ -118,7 +113,7 @@ func (h *AlertHandler) listAlerts(w http.ResponseWriter, r *http.Request) {
 		var resolvedAt *string
 		var acknowledgedAt *string
 		if err := rows.Scan(&a.ID, &a.DeviceID, &a.DeviceName, &a.DeviceType, &a.DeviceIP, &a.Method,
-			&a.Title, &a.Status, &a.Severity,
+			&a.Title, &a.Status,
 			&startedAt, &resolvedAt, &a.Description,
 			&a.Acknowledged, &acknowledgedAt); err != nil {
 			log.Printf("Error scanning alert: %v", err)
@@ -145,7 +140,6 @@ func (h *AlertHandler) getAlert(w http.ResponseWriter, _ *http.Request, id int) 
 		DeviceIP       string  `json:"device_ip"`
 		Title          string  `json:"title"`
 		Status         string  `json:"status"`
-		Severity       string  `json:"severity"`
 		StartedAt      string  `json:"started_at"`
 		ResolvedAt     *string `json:"resolved_at"`
 		Description    string  `json:"description"`
@@ -157,12 +151,12 @@ func (h *AlertHandler) getAlert(w http.ResponseWriter, _ *http.Request, id int) 
 	var startedAt string
 	var resolvedAt *string
 	var acknowledgedAt *string
-	err := h.db.QueryRow(`SELECT a.id, a.device_id, d.name, d.type, d.ip, a.title, a.status, a.severity,
+	err := h.db.QueryRow(`SELECT a.id, a.device_id, d.name, d.type, d.ip, a.title, a.status,
 		a.started_at, a.resolved_at, a.description, a.acknowledged, a.acknowledged_at
 		FROM alerts a
 		JOIN devices d ON a.device_id = d.id
 		WHERE a.id = ?`, id).
-		Scan(&a.ID, &a.DeviceID, &a.DeviceName, &a.DeviceType, &a.DeviceIP, &a.Title, &a.Status, &a.Severity,
+		Scan(&a.ID, &a.DeviceID, &a.DeviceName, &a.DeviceType, &a.DeviceIP, &a.Title, &a.Status,
 			&startedAt, &resolvedAt, &a.Description, &a.Acknowledged, &acknowledgedAt)
 	if err == sql.ErrNoRows {
 		respondError(w, http.StatusNotFound, "Alert not found")

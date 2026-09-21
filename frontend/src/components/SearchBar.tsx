@@ -1,17 +1,14 @@
-import type { DeviceType } from '../types';
-
-type FilterType = 'All' | DeviceType;
+type FilterType = 'All' | string;
 
 interface SearchBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
+  availableTypes: string[];
 }
 
-const filters: FilterType[] = ['All', 'Server', 'Router', 'Switch', 'Access Point', 'Website'];
-
-export function SearchBar({ search, onSearchChange, activeFilter, onFilterChange }: SearchBarProps) {
+export function SearchBar({ search, onSearchChange, activeFilter, onFilterChange, availableTypes }: SearchBarProps) {
   return (
     <div className="animate-fade-in-up anim-delay-1 flex flex-col sm:flex-row gap-3 mb-6">
       {/* Search Input */}
@@ -34,22 +31,17 @@ export function SearchBar({ search, onSearchChange, activeFilter, onFilterChange
         />
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            onClick={() => onFilterChange(filter)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${
-              activeFilter === filter
-                ? 'bg-accent/15 text-accent'
-                : 'bg-surface text-text-muted hover:text-text-secondary hover:bg-surface-elevated'
-            }`}
-          >
-            {filter}
-          </button>
+      {/* Filter Dropdown */}
+      <select
+        value={activeFilter}
+        onChange={(e) => onFilterChange(e.target.value as FilterType)}
+        className="px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text-secondary focus:outline-none focus:border-accent/50 transition-colors cursor-pointer"
+      >
+        <option value="All">All Types</option>
+        {availableTypes.map((type) => (
+          <option key={type} value={type}>{type}</option>
         ))}
-      </div>
+      </select>
     </div>
   );
 }
