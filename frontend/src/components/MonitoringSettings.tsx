@@ -170,6 +170,29 @@ export function MonitoringSettings() {
           </button>
         </div>
 
+        {/* Re-notification Interval Selection */}
+        <div className="p-3 rounded-lg bg-bg/50 border border-border/50 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-text-primary block">Pengingat Ulang Alert (Re-notification Interval)</span>
+              <span className="text-xs text-text-muted block">
+                Jika sudah Acknowledge tapi perangkat <strong>masih Offline</strong>, alarm akan muncul kembali
+              </span>
+            </div>
+            <select
+              value={clientSettings.reNotificationIntervalMinutes}
+              onChange={(e) => handleClientSettingChange('reNotificationIntervalMinutes', parseInt(e.target.value, 10))}
+              className="bg-surface border border-border text-text-primary text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent cursor-pointer"
+            >
+              <option value={0}>Matikan (Hanya 1x Alert)</option>
+              <option value={5}>Setiap 5 Menit</option>
+              <option value={10}>Setiap 10 Menit (Recommended)</option>
+              <option value={15}>Setiap 15 Menit</option>
+              <option value={30}>Setiap 30 Menit</option>
+            </select>
+          </div>
+        </div>
+
         {/* Test Sound & Audio Volume */}
         {clientSettings.soundAlarmEnabled && (
           <div className="p-3 rounded-lg bg-surface/50 border border-border/50 space-y-3">

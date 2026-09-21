@@ -53,7 +53,7 @@ export function startTabTitleFlash(alertMessage: string) {
   let toggle = false;
 
   titleInterval = setInterval(() => {
-    document.title = toggle ? `🚨 [CRITICAL ALERT] ${alertMessage}` : `⚠️ PERIKSA GAMON DASHBOARD!`;
+    document.title = toggle ? `🚨 [PERINGANTAN] ${alertMessage}` : `⚠️ PERIKSA GAMON DASHBOARD!`;
     toggle = !toggle;
   }, 1000);
 }

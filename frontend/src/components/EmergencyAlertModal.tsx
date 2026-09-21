@@ -7,6 +7,7 @@ interface EmergencyAlertModalProps {
 
 export function EmergencyAlertModal({ data, onAcknowledge }: EmergencyAlertModalProps) {
   const isRecovery = data.new_status === 'online' && data.old_status === 'offline';
+  const isReNotification = !!data.is_re_notification;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -39,13 +40,24 @@ export function EmergencyAlertModal({ data, onAcknowledge }: EmergencyAlertModal
 
             <div>
               <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-danger/20 text-danger border border-danger/30 uppercase tracking-wide mb-1">
-                🚨 Critical Alert Event
+                {isReNotification ? '⚠️ PENGINGAT ULANG ALERT' : '🚨 Critical Alert Event'}
               </div>
               <h2 className="text-xl font-extrabold text-text-primary">
-                {isRecovery ? 'PERANGKAT PULIH' : 'PERANGKAT DOWN / OFFLINE'}
+                {isRecovery
+                  ? 'PERANGKAT PULIH'
+                  : isReNotification
+                    ? 'PERANGKAT MASIH OFFLINE!'
+                    : 'PERANGKAT DOWN / OFFLINE'}
               </h2>
             </div>
           </div>
+
+          {/* Re-notification Warning Banner */}
+          {isReNotification && (
+            <div className="bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 mb-4 text-xs text-amber-300 font-medium">
+              ⚠️ <strong>Perhatian:</strong> Perangkat ini sudah di-acknowledge sebelumnya tetapi <strong>masih belum pulih</strong> hingga saat ini.
+            </div>
+          )}
 
           {/* Alert Device Box */}
           <div className="bg-bg/80 border border-border rounded-xl p-4 space-y-3 mb-6">
@@ -60,9 +72,9 @@ export function EmergencyAlertModal({ data, onAcknowledge }: EmergencyAlertModal
               </div>
             )}
             <div className="flex justify-between items-center border-b border-border/60 pb-2">
-              <span className="text-xs text-text-muted">Perubahan Status:</span>
+              <span className="text-xs text-text-muted">Status Perangkat:</span>
               <span className="text-sm font-bold text-danger uppercase">
-                {data.old_status} ➔ {data.new_status}
+                {isReNotification ? 'MASIH OFFLINE' : `${data.old_status} ➔ ${data.new_status}`}
               </span>
             </div>
             <div className="flex justify-between items-center">

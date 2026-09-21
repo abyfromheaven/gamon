@@ -7,6 +7,7 @@ export interface AlertBannerData {
   old_status: string;
   new_status: string;
   timestamp: string;
+  is_re_notification?: boolean;
 }
 
 interface AlertBannerProps {
@@ -56,8 +57,12 @@ export function AlertBanner({ data, onDetail, onDismiss }: AlertBannerProps) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">
-            {isRecovery ? 'RECOVERY' : 'PERINGATAN'}: {data.device_name} ({data.device_ip}) berubah dari{' '}
-            <span className="uppercase font-bold">{data.old_status}</span> ke{' '}
+            {data.is_re_notification && (
+              <span className="bg-amber-500 text-black px-1.5 py-0.5 rounded font-black text-xs mr-2">
+                PENGINGAT ULANG
+              </span>
+            )}
+            {isRecovery ? 'RECOVERY' : 'PERINGATAN'}: {data.device_name} ({data.device_ip}) {data.is_re_notification ? 'masih dalam status' : 'berubah dari ' + data.old_status + ' ke'}{' '}
             <span className="uppercase font-bold">{data.new_status}</span>
           </p>
         </div>

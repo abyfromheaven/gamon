@@ -2,6 +2,7 @@ export interface NotificationClientSettings {
   soundAlarmEnabled: boolean;
   blockScreenEnabled: boolean;
   volume: number;
+  reNotificationIntervalMinutes: number; // 0 = disabled, 5, 10, 15, 30
 }
 
 const STORAGE_KEY = 'gamon_notification_settings';
@@ -10,6 +11,7 @@ const DEFAULT_SETTINGS: NotificationClientSettings = {
   soundAlarmEnabled: true,
   blockScreenEnabled: true,
   volume: 0.7,
+  reNotificationIntervalMinutes: 10,
 };
 
 export function getNotificationClientSettings(): NotificationClientSettings {

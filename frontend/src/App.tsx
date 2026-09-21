@@ -40,7 +40,7 @@ function App() {
         </main>
       </div>
 
-      <AlertBannerContainer statusChange={lastStatusChange} onNavigateToMonitoring={navigateToMonitoring} />
+      <AlertBannerContainer statusChange={lastStatusChange} monitorResults={monitorResults} onNavigateToMonitoring={navigateToMonitoring} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
