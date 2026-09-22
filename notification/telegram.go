@@ -1,7 +1,17 @@
 package notification
 
-// Module TelegramNotifier bertanggung jawab mengirimkan pesan notifikasi peringatan (alert)
-// dan notifikasi pemulihan (recovery) langsung ke aplikasi Telegram admin melalui Telegram Bot API.
+// ============================================================================
+// MODUL NOTIFIKASI TELEGRAM BOT (notification/telegram.go)
+// ============================================================================
+// Modul ini bertugas mengirimkan pesan notifikasi Peringatan (Alert) dan Pemulihan (Recovery)
+// langsung ke aplikasi Telegram milik Admin / Tim IT melalui Telegram Bot API.
+//
+// Alur Kerja:
+// 1. Saat perangkat mati (offline), fungsi SendAlert dipanggil.
+// 2. Notifier membaca Chat ID aktif dari tabel 'telegram_pairing' di SQLite.
+// 3. Notifier melakukan permintaan HTTP POST ke URL API Telegram (https://api.telegram.org/bot<TOKEN>/sendMessage).
+// 4. Pesan dalam format Markdown terkirim langsung ke HP Admin.
+// ============================================================================
 
 import (
 	"database/sql"
@@ -15,7 +25,7 @@ import (
 	"time"
 )
 
-// TelegramNotifier menyimpan konfigurasi token bot, koneksi database, dan HTTP client.
+// TelegramNotifier menyimpan token bot Telegram, koneksi database, dan HTTP client.
 type TelegramNotifier struct {
 	botToken string
 	db       *sql.DB
@@ -23,7 +33,7 @@ type TelegramNotifier struct {
 	client   *http.Client
 }
 
-// NewTelegramNotifier menginisialisasi notifier Telegram.
+// NewTelegramNotifier menginisialisasi Notifier Telegram.
 func NewTelegramNotifier(db *sql.DB) *TelegramNotifier {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 
@@ -35,62 +45,62 @@ func NewTelegramNotifier(db *sql.DB) *TelegramNotifier {
 	}
 }
 
-// IsEnabled mengecek apakah fitur bot Telegram diaktifkan.
+// IsEnabled mengecek apakah variabel lingkungan TELEGRAM_BOT_TOKEN diatur (aktif/nonaktif).
 func (t *TelegramNotifier) IsEnabled() bool {
 	return t.enabled
 }
 
-// SendAlert mengirimkan pesan notifikasi PERINGATAN (OFFLINE) saat ada perangkat jaringan yang mati.
-func (t *TelegramNotifier) SendAlert(deviceName, deviceIP string) {
+// SendAlert mengirimkan pesan notifikasi PERINGATAN (OFFLINE) ke Telegram Admin.
+func (t *TelegramNotifier) SendAlert(namaPerangkat, ipPerangkat string) {
 	if !t.enabled {
 		return
 	}
 
 	chatID := t.getActiveChatID()
 	if chatID == "" {
-		log.Println("[Telegram] Tidak ada koneksi Telegram aktif, skip notifikasi")
+		log.Println("[Telegram] Tidak ada koneksi Telegram aktif, lewati pengiriman notifikasi")
 		return
 	}
 
-	msg := fmt.Sprintf(
+	pesan := fmt.Sprintf(
 		"🚨 *GAMON ALERT*\n\n"+
 			"*Device:* %s\n"+
 			"*IP:* %s\n"+
 			"*Status:* OFFLINE\n"+
 			"*Waktu:* %s\n\n"+
 			"Perangkat tidak merespons ICMP Ping.",
-		deviceName, deviceIP, time.Now().Format("02 Jan 2006 15:04:05"),
+		namaPerangkat, ipPerangkat, time.Now().Format("02 Jan 2006 15:04:05"),
 	)
 
-	t.send(chatID, msg)
+	t.send(chatID, pesan)
 }
 
-// SendRecovery mengirimkan pesan notifikasi PEMULIHAN (ONLINE) saat perangkat yang sebelumnya mati kembali normal.
-func (t *TelegramNotifier) SendRecovery(deviceName, deviceIP string) {
+// SendRecovery mengirimkan pesan notifikasi PEMULIHAN (ONLINE) saat perangkat kembali normal.
+func (t *TelegramNotifier) SendRecovery(namaPerangkat, ipPerangkat string) {
 	if !t.enabled {
 		return
 	}
 
 	chatID := t.getActiveChatID()
 	if chatID == "" {
-		log.Println("[Telegram] Tidak ada koneksi Telegram aktif, skip notifikasi")
+		log.Println("[Telegram] Tidak ada koneksi Telegram aktif, lewati pengiriman notifikasi")
 		return
 	}
 
-	msg := fmt.Sprintf(
+	pesan := fmt.Sprintf(
 		"✅ *GAMON RECOVERY*\n\n"+
 			"*Device:* %s\n"+
 			"*IP:* %s\n"+
 			"*Status:* ONLINE\n"+
 			"*Waktu:* %s\n\n"+
 			"Perangkat kembali online dan merespons normal.",
-		deviceName, deviceIP, time.Now().Format("02 Jan 2006 15:04:05"),
+		namaPerangkat, ipPerangkat, time.Now().Format("02 Jan 2006 15:04:05"),
 	)
 
-	t.send(chatID, msg)
+	t.send(chatID, pesan)
 }
 
-// getActiveChatID mengambil ID Chat Telegram milik admin yang telah berhasil dipairing di database.
+// getActiveChatID mengambil ID Chat Telegram Admin dari database SQLite yang sudah di-pair.
 func (t *TelegramNotifier) getActiveChatID() string {
 	var chatID string
 	err := t.db.QueryRow(
@@ -103,25 +113,25 @@ func (t *TelegramNotifier) getActiveChatID() string {
 	return chatID
 }
 
-// send mengirimkan permintaan HTTP POST ke Telegram Bot API untuk meneruskan pesan ke HP admin.
-func (t *TelegramNotifier) send(chatID string, text string) {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.botToken)
+// send mengirimkan permintaan HTTP POST ke Telegram Bot API endpoint 'sendMessage'.
+func (t *TelegramNotifier) send(chatID string, isiPesan string) {
+	alamatAPI := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.botToken)
 
-	data := url.Values{}
-	data.Set("chat_id", chatID)
-	data.Set("text", text)
-	data.Set("parse_mode", "Markdown")
+	dataForm := url.Values{}
+	dataForm.Set("chat_id", chatID)
+	dataForm.Set("text", isiPesan)
+	dataForm.Set("parse_mode", "Markdown")
 
-	resp, err := t.client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	respon, err := t.client.Post(alamatAPI, "application/x-www-form-urlencoded", strings.NewReader(dataForm.Encode()))
 	if err != nil {
 		log.Printf("[Telegram] Gagal mengirim pesan: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer respon.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("[Telegram] Error HTTP %d: %s", resp.StatusCode, string(body))
+	if respon.StatusCode != http.StatusOK {
+		badanRespon, _ := io.ReadAll(respon.Body)
+		log.Printf("[Telegram] Error HTTP %d: %s", respon.StatusCode, string(badanRespon))
 		return
 	}
 

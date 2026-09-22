@@ -1,7 +1,16 @@
 package database
 
-// Module Database bertanggung jawab mengelola koneksi ke SQLite database (data/gamon.db),
-// melakukan migrasi otomatis tabel-tabel, serta fungsi pembantu pengaturan aplikasi (settings).
+// ============================================================================
+// MODUL DATABASE (database/db.go)
+// ============================================================================
+// Modul ini bertugas mengelola koneksi ke database SQLite (data/gamon.db),
+// melakukan pembuat skema tabel otomatis (migrasi), serta fungsi pembantu
+// untuk membaca/menyimpan pengaturan aplikasi (settings).
+//
+// Catatan Sidang PKL:
+// Database yang digunakan adalah SQLite murni (tanpa GCC/CGO) dengan mode WAL
+// (Write-Ahead Logging) agar proses baca-tulis data latensi jaringan cepat dan aman.
+// ============================================================================
 
 import (
 	"database/sql"
@@ -10,48 +19,50 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite" // Driver SQLite murni dalam bahasa Go (tanpa CGO/GCC)
+	_ "modernc.org/sqlite" // Driver SQLite murni dalam bahasa Go (tanpa dependency CGO)
 )
 
-// dbFile adalah lokasi penyimpanan berkas database SQLite GAMON.
-const dbFile = "data/gamon.db"
+// berkasDatabase lokasi file penyimpanan database SQLite GAMON.
+const berkasDatabase = "data/gamon.db"
 
-// NewDB membuat folder data jika belum ada, membuka koneksi ke berkas SQLite,
-// mengatur konfigurasi koneksi, serta otomatis menjalankan struktur tabel (migrasi).
+// NewDB membuat folder data jika belum ada, membuka koneksi ke file SQLite,
+// mengatur konfigurasi batas koneksi, serta otomatis memuat struktur tabel.
 func NewDB() (*sql.DB, error) {
-	// 1. Pastikan direktori 'data/' sudah dibuat
-	if err := os.MkdirAll(filepath.Dir(dbFile), 0755); err != nil {
+	// 1. Pastikan folder penyimpanan data ('data/') sudah tersedia
+	folderPenyimpanan := filepath.Dir(berkasDatabase)
+	if err := os.MkdirAll(folderPenyimpanan, 0755); err != nil {
 		return nil, fmt.Errorf("gagal membuat direktori data: %w", err)
 	}
 
-	// 2. Buka koneksi database dengan mode WAL (Write-Ahead Logging) agar cepat & aman saat concurrent access
-	db, err := sql.Open("sqlite", dbFile+"?_journal_mode=WAL&_busy_timeout=5000")
+	// 2. Buka koneksi database dengan mode WAL (Write-Ahead Logging) & Timeout 5000ms
+	// Mode WAL memungkinkan pembacaan data (select) tidak terhalang oleh penulisan data (insert/update).
+	koneksiDb, err := sql.Open("sqlite", berkasDatabase+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("gagal membuka database: %w", err)
 	}
 
-	// 3. Batasi koneksi maksimal 1 untuk SQLite menghindari masalah database locked
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
+	// 3. Batasi koneksi maksimal 1 untuk SQLite demi menghindari konflik 'database locked'
+	koneksiDb.SetMaxOpenConns(1)
+	koneksiDb.SetMaxIdleConns(1)
 
-	// 4. Tes koneksi database
-	if err := db.Ping(); err != nil {
+	// 4. Pengujian koneksi awal ke database
+	if err := koneksiDb.Ping(); err != nil {
 		return nil, fmt.Errorf("gagal melakukan tes koneksi ke database: %w", err)
 	}
 
-	// 5. Jalankan pembuat skema tabel otomatis (migrasi)
-	if err := migrate(db); err != nil {
+	// 5. Jalankan proses pembuatan tabel otomatis (migrasi skema database)
+	if err := migrate(koneksiDb); err != nil {
 		return nil, fmt.Errorf("gagal menjalankan migrasi database: %w", err)
 	}
 
 	log.Println("Database SQLite terhubung dan berhasil dimigrasi")
-	return db, nil
+	return koneksiDb, nil
 }
 
-// migrate membuat tabel-tabel utama database jika tabel belum ada saat pertama kali aplikasi dijalankan.
-func migrate(db *sql.DB) error {
-	queries := []string{
-		// Tabel Perangkat (devices)
+// migrate membuat tabel-tabel utama jika belum ada di database SQLite.
+func migrate(koneksiDb *sql.DB) error {
+	daftarPerintahSQL := []string{
+		// Tabel Perangkat (devices) - Menyimpan data perangkat jaringan yang dipantau
 		`CREATE TABLE IF NOT EXISTS devices (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
@@ -67,7 +78,7 @@ func migrate(db *sql.DB) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
-		// Tabel Riwayat Ping (ping_history)
+		// Tabel Riwayat Ping (ping_history) - Menyimpan log latensi & status ping
 		`CREATE TABLE IF NOT EXISTS ping_history (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			device_id INTEGER NOT NULL,
@@ -79,7 +90,7 @@ func migrate(db *sql.DB) error {
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 		)`,
-		// Tabel Peringatan / Masalah (alerts)
+		// Tabel Peringatan (alerts) - Menyimpan riwayat kejadian perangkat down/offline
 		`CREATE TABLE IF NOT EXISTS alerts (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			device_id INTEGER NOT NULL,
@@ -90,13 +101,13 @@ func migrate(db *sql.DB) error {
 			description TEXT DEFAULT '',
 			FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 		)`,
-		// Pembuatan Indeks Pencarian (Index) agar query cepat
+		// Pembuatan Indeks Pencarian (Index SQL) untuk mempercepat pencarian data
 		`CREATE INDEX IF NOT EXISTS idx_ping_history_device_id ON ping_history(device_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_ping_history_timestamp ON ping_history(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_device_id ON alerts(device_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status)`,
 
-		// Tabel Pairing Telegram Bot (telegram_pairing)
+		// Tabel Telegram Pairing - Menyimpan token hubung bot Telegram
 		`CREATE TABLE IF NOT EXISTS telegram_pairing (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			token TEXT NOT NULL UNIQUE,
@@ -107,7 +118,7 @@ func migrate(db *sql.DB) error {
 			paired_at DATETIME
 		)`,
 
-		// Tabel Pengaturan Aplikasi (settings)
+		// Tabel Pengaturan (settings) - Menyimpan opsi konfigurasi sistem (Kunci-Nilai / Key-Value)
 		`CREATE TABLE IF NOT EXISTS settings (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL,
@@ -115,36 +126,38 @@ func migrate(db *sql.DB) error {
 		)`,
 	}
 
-	for _, q := range queries {
-		if _, err := db.Exec(q); err != nil {
+	// Eksekusi seluruh skema tabel secara berurutan
+	for _, perintah := range daftarPerintahSQL {
+		if _, err := koneksiDb.Exec(perintah); err != nil {
 			return fmt.Errorf("migrasi skema gagal: %w", err)
 		}
 	}
 
-	// Migrasi bertahap jika ada penambahan kolom pada versi sebelumnya
-	_, _ = db.Exec("ALTER TABLE devices ADD COLUMN status TEXT DEFAULT 'active'")
-	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN alert_type TEXT DEFAULT 'critical'")
-	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN acknowledged BOOLEAN DEFAULT FALSE")
-	_, _ = db.Exec("ALTER TABLE alerts ADD COLUMN acknowledged_at DATETIME")
+	// Migrasi tambahan untuk penyesuaian versi sebelumnya
+	_, _ = koneksiDb.Exec("ALTER TABLE devices ADD COLUMN status TEXT DEFAULT 'active'")
+	_, _ = koneksiDb.Exec("ALTER TABLE alerts ADD COLUMN alert_type TEXT DEFAULT 'critical'")
+	_, _ = koneksiDb.Exec("ALTER TABLE alerts ADD COLUMN acknowledged BOOLEAN DEFAULT FALSE")
+	_, _ = koneksiDb.Exec("ALTER TABLE alerts ADD COLUMN acknowledged_at DATETIME")
 
 	return nil
 }
 
-// GetSetting mengambil nilai pengaturan berdasarkan kunci (key) dari tabel settings.
-func GetSetting(db *sql.DB, key, defaultValue string) string {
-	var value string
-	err := db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value)
+// GetSetting mengambil nilai pengaturan berdasarkan kata kunci (kunciPengaturan).
+func GetSetting(koneksiDb *sql.DB, kunciPengaturan, nilaiBawaan string) string {
+	var nilaiPengaturan string
+	err := koneksiDb.QueryRow("SELECT value FROM settings WHERE key = ?", kunciPengaturan).Scan(&nilaiPengaturan)
 	if err != nil {
-		return defaultValue
+		return nilaiBawaan
 	}
-	return value
+	return nilaiPengaturan
 }
 
-// SetSetting menyimpan atau memperbarui nilai pengaturan ke tabel settings.
-func SetSetting(db *sql.DB, key, value string) error {
-	_, err := db.Exec(
+// SetSetting menyimpan atau memperbarui nilai pengaturan ke dalam tabel settings.
+func SetSetting(koneksiDb *sql.DB, kunciPengaturan, nilaiPengaturan string) error {
+	_, err := koneksiDb.Exec(
 		"INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP",
-		key, value, value,
+		kunciPengaturan, nilaiPengaturan, nilaiPengaturan,
 	)
 	return err
 }
+

@@ -1,7 +1,17 @@
 package monitor
 
-// Module Ping bertanggung jawab menjalankan Perintah Ping ICMP ke alamat IP target
-// dan mengukur waktu respon (latensi ms) serta status keberadaan perangkat (online/offline).
+// ============================================================================
+// MODUL EXEKUSI ICMP PING (monitor/ping.go)
+// ============================================================================
+// Modul ini bertanggung jawab menjalankan perintah CLI `ping` bawaan Sistem
+// Operasi (Windows vs Linux) ke alamat IP target.
+//
+// Alur Kerja:
+// 1. Memeriksa OS (runtime.GOOS).
+// 2. Mengeksekusi perintah CLI ping (`ping -n 1` di Windows / `ping -c 1` di Linux).
+// 3. Membaca teks keluaran terminal (stdout) dan mengekstrak latensi (ms) serta TTL.
+// 4. Mengembalikan struct CheckResult berstatus 'online' atau 'offline'.
+// ============================================================================
 
 import (
 	"os/exec"
@@ -23,102 +33,100 @@ type CheckResult struct {
 	IP        string         `json:"ip"`         // Alamat IP Perangkat
 	Method    string         `json:"method"`     // Metode pengecekan (ICMP Ping)
 	Status    string         `json:"status"`     // Status hasil pengecekan (online/offline)
-	LatencyMs float64        `json:"latency_ms"` // Latensi / waktu respon dalam milidetik (ms)
-	TTL       int            `json:"ttl"`        // Nilai TTL (Time To Live) dari paket ICMP
+	LatencyMs float64        `json:"latency_ms"` // Waktu respon dalam milidetik (ms)
+	TTL       int            `json:"ttl"`        // Time To Live dari paket ICMP
 	Seq       int            `json:"seq"`        // Nomor urut percobaan ping
 	Timestamp string         `json:"timestamp"`  // Waktu pengecekan dilakukan
 	Details   map[string]any `json:"details"`    // Detail tambahan hasil ping
 }
 
 // PingOnce melakukan 1 kali pengiriman paket ICMP Ping ke Alamat IP target.
-// Fungsi ini mendeteksi Sistem Operasi (Windows vs Linux) untuk menyesuaikan perintah ping terminal OS.
-func PingOnce(ip string, seq int) CheckResult {
-	result := CheckResult{
+func PingOnce(ip string, urutan int) CheckResult {
+	hasil := CheckResult{
 		IP:        ip,
 		Status:    StatusOffline,
-		Seq:       seq,
+		Seq:       urutan,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Details:   map[string]any{},
 	}
 
-	var cmd *exec.Cmd
+	var perintah *exec.Cmd
 	// Menyesuaikan perintah CLI ping berdasarkan Sistem Operasi (OS)
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("ping", "-n", "1", "-w", "3000", ip) // 1 paket, timeout 3000ms
+		perintah = exec.Command("ping", "-n", "1", "-w", "3000", ip) // 1 paket, timeout 3000ms
 	} else {
-		cmd = exec.Command("ping", "-c", "1", "-W", "3", ip)    // 1 paket, timeout 3 detik
+		perintah = exec.Command("ping", "-c", "1", "-W", "3", ip)    // 1 paket, timeout 3 detik
 	}
 
-	out, err := cmd.CombinedOutput()
+	keluaran, err := perintah.CombinedOutput()
 	if err != nil {
 		// Jika perintah ping error / tidak ada respon, kembalikan status offline
-		return result
+		return hasil
 	}
 
 	// Membaca baris demi baris teks hasil respon ping terminal
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		line = strings.TrimSpace(line)
+	for _, barisTeks := range strings.Split(strings.TrimSpace(string(keluaran)), "\n") {
+		barisTeks = strings.TrimSpace(barisTeks)
 
 		if runtime.GOOS == "windows" {
-			// Windows ping output: "Reply from 192.168.1.1: bytes=32 time=2ms TTL=64"
-			// atau                "Reply from 192.168.1.1: bytes=32 time<1ms TTL=128"
-			if !strings.Contains(line, "Reply from") {
+			// Output Windows ping: "Reply from 192.168.1.1: bytes=32 time=2ms TTL=64"
+			if !strings.Contains(barisTeks, "Reply from") {
 				continue
 			}
 
-			result.Status = StatusOnline
-			for _, field := range strings.Fields(line) {
-				kv := strings.SplitN(field, "=", 2)
-				if len(kv) != 2 {
-					// Handle format "time<1ms"
-					if idx := strings.Index(field, "<"); idx > 0 {
-						val := field[idx+1:]
-						val = strings.TrimSuffix(val, "ms")
-						if f, err := strconv.ParseFloat(val, 64); err == nil {
-							result.LatencyMs = f
+			hasil.Status = StatusOnline
+			for _, elemen := range strings.Fields(barisTeks) {
+				pasangan := strings.SplitN(elemen, "=", 2)
+				if len(pasangan) != 2 {
+					// Format "time<1ms"
+					if idx := strings.Index(elemen, "<"); idx > 0 {
+						nilai := elemen[idx+1:]
+						nilai = strings.TrimSuffix(nilai, "ms")
+						if f, err := strconv.ParseFloat(nilai, 64); err == nil {
+							hasil.LatencyMs = f
 						}
 					}
 					continue
 				}
-				switch strings.ToLower(kv[0]) {
+				switch strings.ToLower(pasangan[0]) {
 				case "ttl":
-					if value, err := strconv.Atoi(kv[1]); err == nil {
-						result.TTL = value
-						result.Details["ttl"] = value
+					if nilai, err := strconv.Atoi(pasangan[1]); err == nil {
+						hasil.TTL = nilai
+						hasil.Details["ttl"] = nilai
 					}
 				case "time":
-					val := strings.TrimSuffix(kv[1], "ms")
-					if f, err := strconv.ParseFloat(val, 64); err == nil {
-						result.LatencyMs = f
+					nilai := strings.TrimSuffix(pasangan[1], "ms")
+					if f, err := strconv.ParseFloat(nilai, 64); err == nil {
+						hasil.LatencyMs = f
 					}
 				}
 			}
 		} else {
-			// Linux ping output: "64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.23 ms"
-			if !strings.Contains(line, "icmp_seq=") {
+			// Output Linux ping: "64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.23 ms"
+			if !strings.Contains(barisTeks, "icmp_seq=") {
 				continue
 			}
 
-			result.Status = StatusOnline
-			for _, field := range strings.Fields(line) {
-				kv := strings.SplitN(field, "=", 2)
-				if len(kv) != 2 {
+			hasil.Status = StatusOnline
+			for _, elemen := range strings.Fields(barisTeks) {
+				pasangan := strings.SplitN(elemen, "=", 2)
+				if len(pasangan) != 2 {
 					continue
 				}
-				switch kv[0] {
+				switch pasangan[0] {
 				case "ttl":
-					if value, err := strconv.Atoi(kv[1]); err == nil {
-						result.TTL = value
-						result.Details["ttl"] = value
+					if nilai, err := strconv.Atoi(pasangan[1]); err == nil {
+						hasil.TTL = nilai
+						hasil.Details["ttl"] = nilai
 					}
 				case "time":
-					if value, err := strconv.ParseFloat(kv[1], 64); err == nil {
-						result.LatencyMs = value
+					if nilai, err := strconv.ParseFloat(pasangan[1], 64); err == nil {
+						hasil.LatencyMs = nilai
 					}
 				}
 			}
 		}
 	}
 
-	return result
+	return hasil
 }

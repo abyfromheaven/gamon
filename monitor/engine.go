@@ -1,12 +1,16 @@
 package monitor
 
+// ============================================================================
+// MODUL ENGINE MONITORING (monitor/engine.go)
+// ============================================================================
 // Module Engine adalah jantung utama (core) pemantauan GAMON.
 // Engine bertanggung jawab:
-// 1. Menjalankan timer interval pemantauan tiap perangkat (menggunakan goroutine & ticker).
+// 1. Menjalankan timer interval pemantauan tiap perangkat (goroutine & ticker).
 // 2. Memanggil fungsi PingOnce untuk mengecek status ICMP Ping.
 // 3. Menyimpan hasil ping ke tabel database 'ping_history'.
 // 4. Melacak kegagalan berturut-turut (misal 3 kali berturut-turut terputus -> memicu status Offline & Peringatan Alert).
 // 5. Mengirimkan notifikasi ke Telegram Bot dan memancarkan data (broadcast) ke WebSocket.
+// ============================================================================
 
 import (
 	"context"
@@ -68,19 +72,19 @@ type CheckFunc func(DeviceConfig, int) CheckResult
 // EngineOption adalah opsi konfigurasi untuk pembuatan Engine baru.
 type EngineOption func(*Engine)
 
-// WithCheckFunc mengganti fungsi ping bawaan (berguna untuk testing / mock).
-func WithCheckFunc(check CheckFunc) EngineOption {
-	return func(engine *Engine) {
-		if check != nil {
-			engine.check = check
+// WithCheckFunc mengganti fungsi ping bawaan (berguna untuk pengujian / testing mock).
+func WithCheckFunc(fungsiCek CheckFunc) EngineOption {
+	return func(mesin *Engine) {
+		if fungsiCek != nil {
+			mesin.check = fungsiCek
 		}
 	}
 }
 
 // WithNotifier menambahkan pengirim notifikasi (Telegram).
-func WithNotifier(n Notifier) EngineOption {
-	return func(engine *Engine) {
-		engine.notifier = n
+func WithNotifier(pengirimNotif Notifier) EngineOption {
+	return func(mesin *Engine) {
+		mesin.notifier = pengirimNotif
 	}
 }
 
@@ -98,225 +102,225 @@ type Engine struct {
 }
 
 // NewEngine membuat objek Engine pemonitoring baru.
-func NewEngine(hub HubInterface, db *sql.DB, options ...EngineOption) *Engine {
-	engine := &Engine{
+func NewEngine(hub HubInterface, db *sql.DB, opsi ...EngineOption) *Engine {
+	mesin := &Engine{
 		hub:        hub,
 		db:         db,
 		targets:    make(map[int]context.CancelFunc),
 		lastStatus: make(map[int]string),
 		failures:   make(map[int]int),
-		check: func(config DeviceConfig, seq int) CheckResult {
-			result := PingOnce(config.IP, seq)
-			result.DeviceID = config.DeviceID
-			result.Method = config.Method
-			return result
+		check: func(konfig DeviceConfig, urutan int) CheckResult {
+			hasil := PingOnce(konfig.IP, urutan)
+			hasil.DeviceID = konfig.DeviceID
+			hasil.Method = konfig.Method
+			return hasil
 		},
 	}
-	for _, option := range options {
-		option(engine)
+	for _, pilihan := range opsi {
+		pilihan(mesin)
 	}
-	return engine
+	return mesin
 }
 
 // Start memulai proses pemantauan periodik untuk 1 perangkat secara asynchronous (goroutine).
-func (e *Engine) Start(config DeviceConfig) {
-	interval := config.Interval
-	if interval <= 0 {
-		interval = 3 // Default 3 detik sekali
+func (e *Engine) Start(konfig DeviceConfig) {
+	intervalDetik := konfig.Interval
+	if intervalDetik <= 0 {
+		intervalDetik = 3 // Default 3 detik sekali
 	}
 
 	e.mu.Lock()
-	if _, exists := e.targets[config.DeviceID]; exists {
+	if _, sudahAktif := e.targets[konfig.DeviceID]; sudahAktif {
 		e.mu.Unlock()
 		return // Jika perangkat sudah dipantau, abaikan
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	e.targets[config.DeviceID] = cancel
+	konteks, batalkan := context.WithCancel(context.Background())
+	e.targets[konfig.DeviceID] = batalkan
 	e.mu.Unlock()
 
 	// Menjalankan perulangan pengecekan di goroutine terpisah
-	go e.checkLoop(ctx, config, time.Duration(interval)*time.Second)
-	log.Printf("Memulai pemantauan perangkat ID %d (%s)", config.DeviceID, config.IP)
+	go e.checkLoop(konteks, konfig, time.Duration(intervalDetik)*time.Second)
+	log.Printf("Memulai pemantauan perangkat ID %d (%s)", konfig.DeviceID, konfig.IP)
 }
 
 // Stop menghentikan pemantauan untuk 1 perangkat.
-func (e *Engine) Stop(deviceID int) {
+func (e *Engine) Stop(idPerangkat int) {
 	e.mu.Lock()
-	if cancel, exists := e.targets[deviceID]; exists {
-		cancel() // Hentikan goroutine pemantau
-		delete(e.targets, deviceID)
+	if batalkan, ada := e.targets[idPerangkat]; ada {
+		batalkan() // Hentikan goroutine pemantau
+		delete(e.targets, idPerangkat)
 	}
-	delete(e.lastStatus, deviceID)
-	delete(e.failures, deviceID)
+	delete(e.lastStatus, idPerangkat)
+	delete(e.failures, idPerangkat)
 	e.mu.Unlock()
 }
 
 // IsMonitoring mengecek apakah perangkat sedang aktif dipantau.
-func (e *Engine) IsMonitoring(deviceID int) bool {
+func (e *Engine) IsMonitoring(idPerangkat int) bool {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	_, exists := e.targets[deviceID]
-	return exists
+	_, ada := e.targets[idPerangkat]
+	return ada
 }
 
 // checkLoop adalah perulangan periodik (ticker) yang mengecek perangkat setiap interval waktu.
-func (e *Engine) checkLoop(ctx context.Context, config DeviceConfig, interval time.Duration) {
-	seq := 1
-	e.runCheck(config, seq) // Pengecekan pertama
+func (e *Engine) checkLoop(konteks context.Context, konfig DeviceConfig, interval time.Duration) {
+	urutan := 1
+	e.runCheck(konfig, urutan) // Pengecekan pertama
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	penghitungWaktu := time.NewTicker(interval)
+	defer penghitungWaktu.Stop()
 	for {
 		select {
-		case <-ctx.Done(): // Berhenti jika perintah Stop() dipanggil
+		case <-konteks.Done(): // Berhenti jika perintah Stop() dipanggil
 			return
-		case <-ticker.C: // Berjalan tiap detik interval tercapai
-			seq++
-			e.runCheck(config, seq)
+		case <-penghitungWaktu.C: // Berjalan tiap detik interval tercapai
+			urutan++
+			e.runCheck(konfig, urutan)
 		}
 	}
 }
 
 // runCheck mengeksekusi ping, menyimpan riwayat ke DB, melacak status, serta mengirim sinyal ke WS & Telegram.
-func (e *Engine) runCheck(config DeviceConfig, seq int) {
-	result := e.check(config, seq)
-	result.DeviceID = config.DeviceID
-	result.IP = config.IP
-	result.Method = config.Method
-	if result.Timestamp == "" {
-		result.Timestamp = time.Now().UTC().Format(time.RFC3339)
+func (e *Engine) runCheck(konfig DeviceConfig, urutan int) {
+	hasil := e.check(konfig, urutan)
+	hasil.DeviceID = konfig.DeviceID
+	hasil.IP = konfig.IP
+	hasil.Method = konfig.Method
+	if hasil.Timestamp == "" {
+		hasil.Timestamp = time.Now().UTC().Format(time.RFC3339)
 	}
-	if result.Details == nil {
-		result.Details = map[string]any{}
+	if hasil.Details == nil {
+		hasil.Details = map[string]any{}
 	}
 
 	// 1. Simpan riwayat ping ke database
-	e.saveCheckResult(result)
+	e.saveCheckResult(hasil)
 
 	// 2. Lacak perubahan status dan kebutuhan alert
-	change, shouldResolve, shouldAlert := e.trackStatus(result)
+	perubahan, butuhPulih, butuhPeringatan := e.trackStatus(hasil)
 
 	// 3. Jika perangkat kembali pulih (online)
-	if shouldResolve {
-		e.resolveAlerts(result.DeviceID)
+	if butuhPulih {
+		e.resolveAlerts(hasil.DeviceID)
 		if e.notifier != nil && e.notifier.IsEnabled() {
-			deviceName := e.getDeviceName(result.DeviceID)
-			e.notifier.SendRecovery(deviceName, result.IP)
+			namaPerangkat := e.getDeviceName(hasil.DeviceID)
+			e.notifier.SendRecovery(namaPerangkat, hasil.IP)
 		}
 	}
 
 	// 4. Jika perangkat mati (offline) melampaui batas ambang (threshold)
-	if shouldAlert {
-		e.createAlert(result.DeviceID)
+	if butuhPeringatan {
+		e.createAlert(hasil.DeviceID)
 		if e.notifier != nil && e.notifier.IsEnabled() {
-			deviceName := e.getDeviceName(result.DeviceID)
-			e.notifier.SendAlert(deviceName, result.IP)
+			namaPerangkat := e.getDeviceName(hasil.DeviceID)
+			e.notifier.SendAlert(namaPerangkat, hasil.IP)
 		}
 	}
 
 	// 5. Broadcast perubahan status ke frontend via WebSocket
-	if change != nil {
-		e.hub.Broadcast("status_change", *change)
+	if perubahan != nil {
+		e.hub.Broadcast("status_change", *perubahan)
 	}
-	e.hub.Broadcast("check_result", result)
+	e.hub.Broadcast("check_result", hasil)
 }
 
 // saveCheckResult menyimpan log hasil ping ke tabel ping_history di SQLite.
-func (e *Engine) saveCheckResult(result CheckResult) {
-	details, err := json.Marshal(result.Details)
+func (e *Engine) saveCheckResult(hasil CheckResult) {
+	rincianTeks, err := json.Marshal(hasil.Details)
 	if err != nil {
-		details = []byte("{}")
+		rincianTeks = []byte("{}")
 	}
 	_, err = e.db.Exec(`INSERT INTO ping_history (device_id, status, latency_ms, ttl, seq, details, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, result.DeviceID, result.Status, result.LatencyMs, result.TTL, result.Seq, string(details))
+		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, hasil.DeviceID, hasil.Status, hasil.LatencyMs, hasil.TTL, hasil.Seq, string(rincianTeks))
 	if err != nil {
-		log.Printf("Gagal menyimpan riwayat ping untuk perangkat %d: %v", result.DeviceID, err)
+		log.Printf("Gagal menyimpan riwayat ping untuk perangkat %d: %v", hasil.DeviceID, err)
 	}
 }
 
 // trackStatus mengevaluasi kegagalan berturut-turut untuk menentukan apakah status berubah.
-func (e *Engine) trackStatus(result CheckResult) (*StatusChange, bool, bool) {
+func (e *Engine) trackStatus(hasil CheckResult) (*StatusChange, bool, bool) {
 	e.mu.Lock()
-	oldStatus := e.lastStatus[result.DeviceID]
-	newStatus := oldStatus
-	resolveAlert := false
-	createAlert := false
-	threshold := e.getFailureThreshold()
+	statusLama := e.lastStatus[hasil.DeviceID]
+	statusBaru := statusLama
+	pulihkanAlert := false
+	buatAlert := false
+	ambangBatas := e.getFailureThreshold()
 
-	switch result.Status {
+	switch hasil.Status {
 	case StatusOffline:
-		e.failures[result.DeviceID]++
+		e.failures[hasil.DeviceID]++
 		// Hanya picu alert jika gagal berturut-turut telah mencapai ambang batas (misal 3 kali)
-		if e.failures[result.DeviceID] >= threshold && oldStatus != StatusOffline {
-			newStatus = StatusOffline
-			createAlert = true
+		if e.failures[hasil.DeviceID] >= ambangBatas && statusLama != StatusOffline {
+			statusBaru = StatusOffline
+			buatAlert = true
 		}
 	case StatusOnline:
-		e.failures[result.DeviceID] = 0
-		newStatus = StatusOnline
-		if oldStatus == StatusOffline {
-			resolveAlert = true
+		e.failures[hasil.DeviceID] = 0
+		statusBaru = StatusOnline
+		if statusLama == StatusOffline {
+			pulihkanAlert = true
 		}
 	default:
 		e.mu.Unlock()
 		return nil, false, false
 	}
 
-	if newStatus == oldStatus {
+	if statusBaru == statusLama {
 		e.mu.Unlock()
 		return nil, false, false
 	}
 
-	change := &StatusChange{
-		DeviceID:   result.DeviceID,
-		DeviceName: e.getDeviceName(result.DeviceID),
-		OldStatus:  oldStatus,
-		NewStatus:  newStatus,
-		Timestamp:  result.Timestamp,
+	perubahan := &StatusChange{
+		DeviceID:   hasil.DeviceID,
+		DeviceName: e.getDeviceName(hasil.DeviceID),
+		OldStatus:  statusLama,
+		NewStatus:  statusBaru,
+		Timestamp:  hasil.Timestamp,
 	}
-	e.lastStatus[result.DeviceID] = newStatus
+	e.lastStatus[hasil.DeviceID] = statusBaru
 	e.mu.Unlock()
 
-	if oldStatus == "" {
-		return nil, resolveAlert, createAlert
+	if statusLama == "" {
+		return nil, pulihkanAlert, buatAlert
 	}
 
-	return change, resolveAlert, createAlert
+	return perubahan, pulihkanAlert, buatAlert
 }
 
 // createAlert mencatat peristiwa perangkat mati ke tabel alerts.
-func (e *Engine) createAlert(deviceID int) {
+func (e *Engine) createAlert(idPerangkat int) {
 	_, err := e.db.Exec(`INSERT INTO alerts (device_id, title, status, description)
-		VALUES (?, 'Perangkat Tidak Merespon (Offline)', 'ongoing', 'Perangkat tidak membalas ICMP Ping')`, deviceID)
+		VALUES (?, 'Perangkat Tidak Merespon (Offline)', 'ongoing', 'Perangkat tidak membalas ICMP Ping')`, idPerangkat)
 	if err != nil {
-		log.Printf("Gagal membuat catatan alert untuk perangkat %d: %v", deviceID, err)
+		log.Printf("Gagal membuat catatan alert untuk perangkat %d: %v", idPerangkat, err)
 	}
 }
 
 // resolveAlerts mengubah status peringatan bermasalah menjadi pulih (resolved).
-func (e *Engine) resolveAlerts(deviceID int) {
+func (e *Engine) resolveAlerts(idPerangkat int) {
 	_, err := e.db.Exec(`UPDATE alerts SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP
-		WHERE device_id = ? AND status = 'ongoing'`, deviceID)
+		WHERE device_id = ? AND status = 'ongoing'`, idPerangkat)
 	if err != nil {
-		log.Printf("Gagal memperbarui status alert teratasi untuk perangkat %d: %v", deviceID, err)
+		log.Printf("Gagal memperbarui status alert teratasi untuk perangkat %d: %v", idPerangkat, err)
 	}
 }
 
 // getDeviceName mengambil nama perangkat dari database.
-func (e *Engine) getDeviceName(deviceID int) string {
-	var name string
-	if err := e.db.QueryRow("SELECT name FROM devices WHERE id = ?", deviceID).Scan(&name); err != nil {
+func (e *Engine) getDeviceName(idPerangkat int) string {
+	var nama string
+	if err := e.db.QueryRow("SELECT name FROM devices WHERE id = ?", idPerangkat).Scan(&nama); err != nil {
 		return "Unknown"
 	}
-	return name
+	return nama
 }
 
 // getFailureThreshold mengambil batas ambang batas kegagalan ping dari pengaturan database (default: 3 kali).
 func (e *Engine) getFailureThreshold() int {
-	val := database.GetSetting(e.db, "failure_threshold", "3")
-	threshold, err := strconv.Atoi(val)
-	if err != nil || threshold < 1 {
+	nilaiTeks := database.GetSetting(e.db, "failure_threshold", "3")
+	ambang, err := strconv.Atoi(nilaiTeks)
+	if err != nil || ambang < 1 {
 		return 3
 	}
-	return threshold
+	return ambang
 }

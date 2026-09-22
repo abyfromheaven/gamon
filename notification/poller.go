@@ -1,7 +1,15 @@
 package notification
 
-// Module TelegramPoller bertugas mengecek pesan masuk (perintah) dari pengguna ke Telegram Bot secara periodik (polling setiap 2 detik).
-// Pengguna dapat mengirim perintah seperti /pair GMN-XXXX-XXXX untuk menghubungkan Telegram ke akun GAMON.
+// ============================================================================
+// MODUL TELEGRAM POLLER (notification/poller.go)
+// ============================================================================
+// Modul ini bertugas mengecek pesan masuk (perintah slash command) dari pengguna
+// di aplikasi Telegram secara periodik (polling setiap 2 detik).
+// Perintah yang didukung:
+// 1. /pair GMN-XXXX-XXXX : Menghubungkan Telegram ke sistem GAMON.
+// 2. /status              : Mengecek status koneksi Telegram.
+// 3. /help                : Menampilkan daftar bantuan perintah bot.
+// ============================================================================
 
 import (
 	"encoding/json"
@@ -14,7 +22,7 @@ import (
 	"time"
 )
 
-// TelegramPoller mengelola mekanisme polling pembaruan pesan dari Telegram Bot API.
+// TelegramPoller mengelola perulangan polling perintah pesan dari Telegram API.
 type TelegramPoller struct {
 	botToken   string
 	client     *http.Client
@@ -24,6 +32,7 @@ type TelegramPoller struct {
 	chatIDMap  map[int64]string
 }
 
+// Format data internal pembaruan pesan dari Telegram API.
 type telegramUpdate struct {
 	UpdateID int `json:"update_id"`
 	Message  struct {
@@ -38,12 +47,13 @@ type telegramUpdate struct {
 	} `json:"message"`
 }
 
+// Format respons pembungkus dari API Telegram.
 type telegramResponse struct {
 	Ok     bool             `json:"ok"`
 	Result []telegramUpdate `json:"result"`
 }
 
-// NewTelegramPoller membuat objek poller Telegram baru.
+// NewTelegramPoller membuat instansi baru TelegramPoller.
 func NewTelegramPoller(botToken string, pairFunc func(token, chatID string) error, statusFunc func(chatID string) bool) *TelegramPoller {
 	return &TelegramPoller{
 		botToken:   botToken,
@@ -54,7 +64,7 @@ func NewTelegramPoller(botToken string, pairFunc func(token, chatID string) erro
 	}
 }
 
-// Start menjalankan perulangan pencarian pesan masuk dari Telegram (polling) setiap 2 detik di latar belakang.
+// Start menjalankan goroutine polling interval setiap 2 detik di latar belakang.
 func (p *TelegramPoller) Start() {
 	if p.botToken == "" {
 		log.Println("[Telegram Poller] Nonaktif (Bot token tidak diatur)")
@@ -63,117 +73,118 @@ func (p *TelegramPoller) Start() {
 
 	log.Println("[Telegram Poller] Berjalan (Polling pesan masuk setiap 2 detik)")
 
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
+	penghitungWaktu := time.NewTicker(2 * time.Second)
+	defer penghitungWaktu.Stop()
 
-	for range ticker.C {
-		updates, err := p.getUpdates()
+	for range penghitungWaktu.C {
+		daftarPesanBaru, err := p.getUpdates()
 		if err != nil {
 			log.Printf("[Telegram Poller] Error mengambil pesan: %v", err)
 			continue
 		}
 
-		for _, update := range updates {
-			p.offset = update.UpdateID + 1
-			p.handleUpdate(update)
+		for _, pesan := range daftarPesanBaru {
+			p.offset = pesan.UpdateID + 1
+			p.handleUpdate(pesan)
 		}
 	}
 }
 
-// getUpdates memanggil Telegram Bot API 'getUpdates' untuk mengambil daftar pesan baru yang dikirim pengguna.
+// getUpdates memanggil API Telegram endpoint 'getUpdates' untuk mengambil pesan baru.
 func (p *TelegramPoller) getUpdates() ([]telegramUpdate, error) {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates", p.botToken)
+	alamatAPI := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates", p.botToken)
 
-	data := url.Values{}
-	data.Set("offset", fmt.Sprintf("%d", p.offset))
-	data.Set("timeout", "1")
-	data.Set("allowed_updates", `["message"]`)
+	dataForm := url.Values{}
+	dataForm.Set("offset", fmt.Sprintf("%d", p.offset))
+	dataForm.Set("timeout", "1")
+	dataForm.Set("allowed_updates", `["message"]`)
 
-	resp, err := p.client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	respon, err := p.client.Post(alamatAPI, "application/x-www-form-urlencoded", strings.NewReader(dataForm.Encode()))
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer respon.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	badanRespon, err := io.ReadAll(respon.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var result telegramResponse
-	if err := json.Unmarshal(body, &result); err != nil {
+	var hasil telegramResponse
+	if err := json.Unmarshal(badanRespon, &hasil); err != nil {
 		return nil, err
 	}
 
-	if !result.Ok {
+	if !hasil.Ok {
 		return nil, fmt.Errorf("API Telegram mengembalikan status ok=false")
 	}
 
-	return result.Result, nil
+	return hasil.Result, nil
 }
 
-// handleUpdate memproses perintah yang diketik oleh pengguna di Telegram (/pair, /status, /help).
-func (p *TelegramPoller) handleUpdate(update telegramUpdate) {
-	text := update.Message.Text
-	chatID := update.Message.Chat.ID
-	fromName := update.Message.From.FirstName
+// handleUpdate mengevaluasi isi pesan yang diketik oleh pengguna di Telegram.
+func (p *TelegramPoller) handleUpdate(pesan telegramUpdate) {
+	teksPesan := pesan.Message.Text
+	chatID := pesan.Message.Chat.ID
+	namaPengirim := pesan.Message.From.FirstName
 
-	if text == "" {
+	if teksPesan == "" {
 		return
 	}
 
-	// Evaluasi perintah slash command
-	if strings.HasPrefix(text, "/pair") {
-		p.handlePair(text, chatID, fromName)
-	} else if text == "/status" {
+	// Evaluasi jenis perintah (slash command)
+	if strings.HasPrefix(teksPesan, "/pair") {
+		p.handlePair(teksPesan, chatID, namaPengirim)
+	} else if teksPesan == "/status" {
 		p.handleStatus(chatID)
-	} else if text == "/unpair" {
-		p.handleUnpair(chatID, fromName)
-	} else if text == "/start" || text == "/help" {
+	} else if teksPesan == "/unpair" {
+		p.handleUnpair(chatID, namaPengirim)
+	} else if teksPesan == "/start" || teksPesan == "/help" {
 		p.handleHelp(chatID)
 	}
 }
 
-// handlePair memproses kode token pairing (contoh: /pair GMN-1234-5678) untuk menghubungkan akun Telegram.
-func (p *TelegramPoller) handlePair(text string, chatID int64, fromName string) {
-	parts := strings.Fields(text)
-	if len(parts) < 2 {
+// handlePair memproses token pairing (contoh: /pair GMN-1234-5678).
+func (p *TelegramPoller) handlePair(teksPesan string, chatID int64, namaPengirim string) {
+	bagianKata := strings.Fields(teksPesan)
+	if len(bagianKata) < 2 {
 		p.sendMessage(chatID, "Gunakan format: /pair GMN-XXXX-XXXX")
 		return
 	}
 
-	token := parts[1]
-	err := p.pairFunc(token, fmt.Sprintf("%d", chatID))
+	tokenPairing := bagianKata[1]
+	err := p.pairFunc(tokenPairing, fmt.Sprintf("%d", chatID))
 	if err != nil {
 		p.sendMessage(chatID, fmt.Sprintf("❌ Pairing gagal: %s", err.Error()))
 		return
 	}
 
-	name := fromName
-	if name == "" {
-		name = "Admin"
+	nama := namaPengirim
+	if nama == "" {
+		nama = "Admin"
 	}
-	p.sendMessage(chatID, fmt.Sprintf("✅ Pairing berhasil!\n\nHalo %s, Telegram kamu sudah terhubung dengan GAMON.\nSekarang kamu akan menerima notifikasi jika ada perangkat yang offline.", name))
-	log.Printf("[Telegram Poller] Pairing berhasil: chat_id=%d, from=%s", chatID, fromName)
+	p.sendMessage(chatID, fmt.Sprintf("✅ Pairing berhasil!\n\nHalo %s, Telegram kamu sudah terhubung dengan GAMON.\nSekarang kamu akan menerima notifikasi jika ada perangkat yang offline.", nama))
+	log.Printf("[Telegram Poller] Pairing berhasil: chat_id=%d, dari=%s", chatID, namaPengirim)
 }
 
-// handleStatus mengecek apakah Chat ID ini sudah terhubung ke sistem GAMON.
+// handleStatus mengecek status terhubung/tidaknya ID chat saat ini.
 func (p *TelegramPoller) handleStatus(chatID int64) {
-	chatIDStr := fmt.Sprintf("%d", chatID)
-	if p.statusFunc != nil && p.statusFunc(chatIDStr) {
+	chatIDTeks := fmt.Sprintf("%d", chatID)
+	if p.statusFunc != nil && p.statusFunc(chatIDTeks) {
 		p.sendMessage(chatID, "📊 Status: Terhubung ✅\n\nTelegram kamu aktif dan akan menerima notifikasi dari GAMON.")
 	} else {
 		p.sendMessage(chatID, "📊 Status: Belum Terhubung ❌\n\nTelegram belum terhubung. Gunakan /pair GMN-XXXX-XXXX untuk menghubungkan.")
 	}
 }
 
-func (p *TelegramPoller) handleUnpair(chatID int64, fromName string) {
+// handleUnpair memberikan arahan pemutusan koneksi Telegram via website.
+func (p *TelegramPoller) handleUnpair(chatID int64, namaPengirim string) {
 	p.sendMessage(chatID, "Untuk memutus hubungan Telegram, buka halaman Settings di website GAMON.")
 }
 
-// handleHelp menampilkan daftar perintah yang bisa digunakan pengguna di Telegram Bot.
+// handleHelp menampilkan menu bantuan perintah bot Telegram.
 func (p *TelegramPoller) handleHelp(chatID int64) {
-	msg := `🤖 GAMON Bot
+	pesanBantuan := `🤖 GAMON Bot
 
 Perintah yang tersedia:
 
@@ -188,26 +199,26 @@ Tampilkan bantuan ini
 
 Untuk memulai, buka website GAMON → Settings → Telegram Integration → Connect Telegram, lalu kirim perintah /pair dengan token yang diberikan.`
 
-	p.sendMessage(chatID, msg)
+	p.sendMessage(chatID, pesanBantuan)
 }
 
-// sendMessage mengirimkan balasan pesan teks biasa dari bot ke pengguna Telegram.
-func (p *TelegramPoller) sendMessage(chatID int64, text string) {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", p.botToken)
+// sendMessage mengirimkan pesan balasan dari bot ke pengguna Telegram.
+func (p *TelegramPoller) sendMessage(chatID int64, isiPesan string) {
+	alamatAPI := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", p.botToken)
 
-	data := url.Values{}
-	data.Set("chat_id", fmt.Sprintf("%d", chatID))
-	data.Set("text", text)
+	dataForm := url.Values{}
+	dataForm.Set("chat_id", fmt.Sprintf("%d", chatID))
+	dataForm.Set("text", isiPesan)
 
-	resp, err := p.client.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	respon, err := p.client.Post(alamatAPI, "application/x-www-form-urlencoded", strings.NewReader(dataForm.Encode()))
 	if err != nil {
 		log.Printf("[Telegram Poller] Gagal kirim pesan ke %d: %v", chatID, err)
 		return
 	}
-	defer resp.Body.Close()
+	defer respon.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("[Telegram Poller] Error HTTP %d: %s", resp.StatusCode, string(body))
+	if respon.StatusCode != http.StatusOK {
+		badanRespon, _ := io.ReadAll(respon.Body)
+		log.Printf("[Telegram Poller] Error HTTP %d: %s", respon.StatusCode, string(badanRespon))
 	}
 }

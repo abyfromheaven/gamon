@@ -1,5 +1,15 @@
 package handler
 
+// ============================================================================
+// MODUL HANDLER PERANGKAT (handler/device.go)
+// ============================================================================
+// Modul ini mengelola seluruh API Endpoint yang berkaitan dengan data Perangkat
+// Jaringan (Devices), seperti:
+// 1. Menampilkan daftar perangkat & detail 1 perangkat.
+// 2. Menambah, mengedit, dan menghapus perangkat.
+// 3. Mengaktifkan / menonaktifkan status pemantauan (start/stop monitoring).
+// ============================================================================
+
 import (
 	"database/sql"
 	"encoding/json"
@@ -11,16 +21,36 @@ import (
 	"gamon/monitor"
 )
 
+// DeviceHandler menyimpan dependency koneksi database, engine pemantau, dan websocket hub.
 type DeviceHandler struct {
 	db     *sql.DB
 	engine *monitor.Engine
 	hub    *Hub
 }
 
+// NewDeviceHandler membuat instansi baru DeviceHandler.
 func NewDeviceHandler(db *sql.DB, engine *monitor.Engine, hub *Hub) *DeviceHandler {
 	return &DeviceHandler{db: db, engine: engine, hub: hub}
 }
 
+// Format standar data perangkat yang dikembalikan sebagai balasan JSON ke Frontend React.
+type DeviceResponse struct {
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	Type          string `json:"type"`
+	IP            string `json:"ip"`
+	URL           string `json:"url"`
+	Port          *int   `json:"port"`
+	Method        string `json:"method"`
+	Location      string `json:"location"`
+	CheckInterval int    `json:"check_interval"`
+	Status        string `json:"status"`
+	Description   string `json:"description"`
+	CreatedAt     string `json:"created_at,omitempty"`
+	UpdatedAt     string `json:"updated_at,omitempty"`
+}
+
+// Struct untuk menerima data penambahan perangkat baru dari request body JSON.
 type CreateDeviceRequest struct {
 	Name          string `json:"name"`
 	Type          string `json:"type"`
@@ -34,6 +64,7 @@ type CreateDeviceRequest struct {
 	Description   string `json:"description"`
 }
 
+// Struct untuk menerima data pembaruan perangkat.
 type UpdateDeviceRequest struct {
 	Name          *string `json:"name"`
 	Type          *string `json:"type"`
@@ -47,10 +78,12 @@ type UpdateDeviceRequest struct {
 	Description   *string `json:"description"`
 }
 
+// Struct untuk menerima ubah status aktif/nonaktif.
 type ToggleStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// HandleDevices memproses request rute /api/devices (GET untuk list, POST untuk tambah).
 func (h *DeviceHandler) HandleDevices(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -58,142 +91,117 @@ func (h *DeviceHandler) HandleDevices(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		h.createDevice(w, r)
 	default:
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		respondError(w, http.StatusMethodNotAllowed, "Metode HTTP tidak diizinkan")
 	}
 }
 
+// HandleDevice memproses request rute /api/devices/{id} (GET detail, PUT edit, DELETE hapus, & aksi start/stop/status).
 func (h *DeviceHandler) HandleDevice(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/devices/")
-	idStr = strings.Split(idStr, "/")[0]
-	id, err := strconv.Atoi(idStr)
+	// Ekstrak ID Perangkat dari URL Path
+	idTeks := strings.TrimPrefix(r.URL.Path, "/api/devices/")
+	idTeks = strings.Split(idTeks, "/")[0]
+	idPerangkat, err := strconv.Atoi(idTeks)
 	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid device ID")
+		respondError(w, http.StatusBadRequest, "ID Perangkat tidak valid")
 		return
 	}
 
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/devices/"+idStr), "/")
+	bagianSubURL := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/devices/"+idTeks), "/")
 
-	if len(parts) > 1 && parts[1] == "start" {
-		h.startMonitoring(w, r, id)
+	// Cek rute khusus seperti /start, /stop, /status
+	if len(bagianSubURL) > 1 && bagianSubURL[1] == "start" {
+		h.startMonitoring(w, r, idPerangkat)
 		return
 	}
-	if len(parts) > 1 && parts[1] == "stop" {
-		h.stopMonitoring(w, r, id)
+	if len(bagianSubURL) > 1 && bagianSubURL[1] == "stop" {
+		h.stopMonitoring(w, r, idPerangkat)
 		return
 	}
-	if len(parts) > 1 && parts[1] == "status" {
-		h.toggleStatus(w, r, id)
+	if len(bagianSubURL) > 1 && bagianSubURL[1] == "status" {
+		h.toggleStatus(w, r, idPerangkat)
 		return
 	}
 
 	switch r.Method {
 	case http.MethodGet:
-		h.getDevice(w, r, id)
+		h.getDevice(w, r, idPerangkat)
 	case http.MethodPut:
-		h.updateDevice(w, r, id)
+		h.updateDevice(w, r, idPerangkat)
 	case http.MethodDelete:
-		h.deleteDevice(w, r, id)
+		h.deleteDevice(w, r, idPerangkat)
 	default:
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		respondError(w, http.StatusMethodNotAllowed, "Metode HTTP tidak diizinkan")
 	}
 }
 
+// listDevices mengambil seluruh daftar perangkat dari database SQLite.
 func (h *DeviceHandler) listDevices(w http.ResponseWriter, _ *http.Request) {
-	rows, err := h.db.Query("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices ORDER BY created_at DESC")
+	barisData, err := h.db.Query("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices ORDER BY created_at DESC")
 	if err != nil {
-		log.Printf("Error listing devices: %v", err)
-		respondError(w, http.StatusInternalServerError, "Failed to list devices")
+		log.Printf("Gagal membaca daftar perangkat: %v", err)
+		respondError(w, http.StatusInternalServerError, "Gagal mengambil daftar perangkat")
 		return
 	}
-	defer rows.Close()
+	defer barisData.Close()
 
-	type DeviceResponse struct {
-		ID            int    `json:"id"`
-		Name          string `json:"name"`
-		Type          string `json:"type"`
-		IP            string `json:"ip"`
-		URL           string `json:"url"`
-		Port          *int   `json:"port"`
-		Method        string `json:"method"`
-		Location      string `json:"location"`
-		CheckInterval int    `json:"check_interval"`
-		Status        string `json:"status"`
-		Description   string `json:"description"`
-		CreatedAt     string `json:"created_at"`
-		UpdatedAt     string `json:"updated_at"`
-	}
-
-	var devices []DeviceResponse
-	for rows.Next() {
+	var daftarPerangkat []DeviceResponse
+	for barisData.Next() {
 		var d DeviceResponse
-		var createdAt, updatedAt string
-		if err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &createdAt, &updatedAt); err != nil {
-			log.Printf("Error scanning device: %v", err)
+		var waktuDibuat, waktuDiubah string
+		if err := barisData.Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &waktuDibuat, &waktuDiubah); err != nil {
+			log.Printf("Gagal membaca baris perangkat: %v", err)
 			continue
 		}
-		d.CreatedAt = createdAt
-		d.UpdatedAt = updatedAt
-		devices = append(devices, d)
+		d.CreatedAt = waktuDibuat
+		d.UpdatedAt = waktuDiubah
+		daftarPerangkat = append(daftarPerangkat, d)
 	}
 
-	if devices == nil {
-		devices = []DeviceResponse{}
+	if daftarPerangkat == nil {
+		daftarPerangkat = []DeviceResponse{}
 	}
-	respondData(w, devices)
+	respondData(w, daftarPerangkat)
 }
 
-func (h *DeviceHandler) getDevice(w http.ResponseWriter, _ *http.Request, id int) {
-	type DeviceResponse struct {
-		ID            int    `json:"id"`
-		Name          string `json:"name"`
-		Type          string `json:"type"`
-		IP            string `json:"ip"`
-		URL           string `json:"url"`
-		Port          *int   `json:"port"`
-		Method        string `json:"method"`
-		Location      string `json:"location"`
-		CheckInterval int    `json:"check_interval"`
-		Status        string `json:"status"`
-		Description   string `json:"description"`
-		CreatedAt     string `json:"created_at"`
-		UpdatedAt     string `json:"updated_at"`
-	}
-
+// getDevice mengambil rincian 1 perangkat berdasarkan ID.
+func (h *DeviceHandler) getDevice(w http.ResponseWriter, _ *http.Request, idPerangkat int) {
 	var d DeviceResponse
-	var createdAt, updatedAt string
-	err := h.db.QueryRow("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices WHERE id = ?", id).
-		Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &createdAt, &updatedAt)
+	var waktuDibuat, waktuDiubah string
+	err := h.db.QueryRow("SELECT id, name, type, ip, url, port, method, location, check_interval, status, description, created_at, updated_at FROM devices WHERE id = ?", idPerangkat).
+		Scan(&d.ID, &d.Name, &d.Type, &d.IP, &d.URL, &d.Port, &d.Method, &d.Location, &d.CheckInterval, &d.Status, &d.Description, &waktuDibuat, &waktuDiubah)
 	if err == sql.ErrNoRows {
-		respondError(w, http.StatusNotFound, "Device not found")
+		respondError(w, http.StatusNotFound, "Perangkat tidak ditemukan")
 		return
 	}
 	if err != nil {
-		log.Printf("Error getting device: %v", err)
-		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		log.Printf("Gagal mengambil data perangkat ID %d: %v", idPerangkat, err)
+		respondError(w, http.StatusInternalServerError, "Gagal mengambil detail perangkat")
 		return
 	}
-	d.CreatedAt = createdAt
-	d.UpdatedAt = updatedAt
+	d.CreatedAt = waktuDibuat
+	d.UpdatedAt = waktuDiubah
 	respondData(w, d)
 }
 
+// createDevice menambahkan perangkat baru ke database dan langsung memulai pemantauan jika status 'active'.
 func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 	var req CreateDeviceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+		respondError(w, http.StatusBadRequest, "Format JSON tidak valid")
 		return
 	}
 
+	// Validasi input wajib
 	if req.Name == "" {
-		respondError(w, http.StatusBadRequest, "Name is required")
+		respondError(w, http.StatusBadRequest, "Nama perangkat wajib diisi")
 		return
 	}
 	if req.Type == "" {
-		respondError(w, http.StatusBadRequest, "Type is required")
+		respondError(w, http.StatusBadRequest, "Tipe perangkat wajib diisi")
 		return
 	}
 	if req.IP == "" {
-		respondError(w, http.StatusBadRequest, "IP is required")
+		respondError(w, http.StatusBadRequest, "Alamat IP wajib diisi")
 		return
 	}
 	if req.Method == "" {
@@ -206,41 +214,27 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 		req.Status = "active"
 	}
 	if req.Status != "active" && req.Status != "inactive" {
-		respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+		respondError(w, http.StatusBadRequest, "Status harus 'active' atau 'inactive'")
 		return
 	}
 
-	result, err := h.db.Exec(
+	hasilSimpan, err := h.db.Exec(
 		"INSERT INTO devices (name, type, ip, url, port, method, location, check_interval, status, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		req.Name, req.Type, req.IP, req.URL, req.Port, req.Method, req.Location, req.CheckInterval, req.Status, req.Description,
 	)
 	if err != nil {
-		log.Printf("Error creating device: %v", err)
-		respondError(w, http.StatusInternalServerError, "Failed to create device")
+		log.Printf("Gagal menyimpan perangkat baru: %v", err)
+		respondError(w, http.StatusInternalServerError, "Gagal menambahkan perangkat")
 		return
 	}
 
-	id, _ := result.LastInsertId()
+	idBaru, _ := hasilSimpan.LastInsertId()
 	if req.Status == "active" {
-		h.engine.Start(deviceConfig(int(id), req.IP, req.URL, req.Port, req.Method, req.CheckInterval))
+		h.engine.Start(bikinKonfigurasiPemantau(int(idBaru), req.IP, req.URL, req.Port, req.Method, req.CheckInterval))
 	}
 
-	type DeviceResponse struct {
-		ID            int    `json:"id"`
-		Name          string `json:"name"`
-		Type          string `json:"type"`
-		IP            string `json:"ip"`
-		URL           string `json:"url"`
-		Port          *int   `json:"port"`
-		Method        string `json:"method"`
-		Location      string `json:"location"`
-		CheckInterval int    `json:"check_interval"`
-		Status        string `json:"status"`
-		Description   string `json:"description"`
-	}
-
-	device := DeviceResponse{
-		ID:            int(id),
+	perangkatBaru := DeviceResponse{
+		ID:            int(idBaru),
 		Name:          req.Name,
 		Type:          req.Type,
 		IP:            req.IP,
@@ -253,47 +247,48 @@ func (h *DeviceHandler) createDevice(w http.ResponseWriter, r *http.Request) {
 		Description:   req.Description,
 	}
 
-	log.Printf("Device created: %s (%s)", req.Name, req.IP)
-	respondData(w, device)
+	log.Printf("Perangkat berhasil ditambahkan: %s (%s)", req.Name, req.IP)
+	respondData(w, perangkatBaru)
 }
 
-func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id int) {
+// updateDevice memperbarui data perangkat dan menyesuaikan pemantauan engine secara otomatis.
+func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, idPerangkat int) {
 	var req UpdateDeviceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+		respondError(w, http.StatusBadRequest, "Format JSON tidak valid")
 		return
 	}
 
-	var currentName, currentType, currentIP, currentURL, currentMethod, currentLocation, currentStatus, currentDescription string
-	var currentPort *int
-	var currentInterval int
-	err := h.db.QueryRow("SELECT name, type, ip, url, port, method, location, check_interval, status, description FROM devices WHERE id = ?", id).
-		Scan(&currentName, &currentType, &currentIP, &currentURL, &currentPort, &currentMethod, &currentLocation, &currentInterval, &currentStatus, &currentDescription)
+	var namaLama, tipeLama, ipLama, urlLama, metodeLama, lokasiLama, statusLama, deskripsiLama string
+	var portLama *int
+	var intervalLama int
+	err := h.db.QueryRow("SELECT name, type, ip, url, port, method, location, check_interval, status, description FROM devices WHERE id = ?", idPerangkat).
+		Scan(&namaLama, &tipeLama, &ipLama, &urlLama, &portLama, &metodeLama, &lokasiLama, &intervalLama, &statusLama, &deskripsiLama)
 	if err == sql.ErrNoRows {
-		respondError(w, http.StatusNotFound, "Device not found")
+		respondError(w, http.StatusNotFound, "Perangkat tidak ditemukan")
 		return
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		respondError(w, http.StatusInternalServerError, "Gagal mengambil data perangkat")
 		return
 	}
 
-	name := currentName
-	typ := currentType
-	ip := currentIP
-	url := currentURL
-	port := currentPort
-	method := currentMethod
-	location := currentLocation
-	interval := currentInterval
-	status := currentStatus
-	desc := currentDescription
+	nama := namaLama
+	tipe := tipeLama
+	ip := ipLama
+	url := urlLama
+	port := portLama
+	metode := metodeLama
+	lokasi := lokasiLama
+	interval := intervalLama
+	status := statusLama
+	deskripsi := deskripsiLama
 
 	if req.Name != nil {
-		name = *req.Name
+		nama = *req.Name
 	}
 	if req.Type != nil {
-		typ = *req.Type
+		tipe = *req.Type
 	}
 	if req.IP != nil {
 		ip = *req.IP
@@ -305,200 +300,181 @@ func (h *DeviceHandler) updateDevice(w http.ResponseWriter, r *http.Request, id 
 		port = req.Port
 	}
 	if req.Method != nil {
-		method = *req.Method
+		metode = *req.Method
 	}
 	if req.Location != nil {
-		location = *req.Location
+		lokasi = *req.Location
 	}
 	if req.CheckInterval != nil {
 		interval = *req.CheckInterval
 	}
 	if req.Status != nil {
 		if *req.Status != "active" && *req.Status != "inactive" {
-			respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+			respondError(w, http.StatusBadRequest, "Status harus 'active' atau 'inactive'")
 			return
 		}
 		status = *req.Status
 	}
 	if req.Description != nil {
-		desc = *req.Description
+		deskripsi = *req.Description
 	}
 
 	_, err = h.db.Exec(
 		"UPDATE devices SET name = ?, type = ?, ip = ?, url = ?, port = ?, method = ?, location = ?, check_interval = ?, status = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		name, typ, ip, url, port, method, location, interval, status, desc, id,
+		nama, tipe, ip, url, port, metode, lokasi, interval, status, deskripsi, idPerangkat,
 	)
 	if err != nil {
-		log.Printf("Error updating device: %v", err)
-		respondError(w, http.StatusInternalServerError, "Failed to update device")
+		log.Printf("Gagal memperbarui perangkat ID %d: %v", idPerangkat, err)
+		respondError(w, http.StatusInternalServerError, "Gagal memperbarui data perangkat")
 		return
 	}
 
-	// Restarting an active device applies changed IP, interval, and method immediately.
-	h.engine.Stop(id)
+	// Hentikan dulu pemantauan lama, lalu nyalakan kembali jika status 'active'
+	h.engine.Stop(idPerangkat)
 	if status == "active" {
-		h.engine.Start(deviceConfig(id, ip, url, port, method, interval))
+		h.engine.Start(bikinKonfigurasiPemantau(idPerangkat, ip, url, port, metode, interval))
 	}
 
-	type DeviceResponse struct {
-		ID            int    `json:"id"`
-		Name          string `json:"name"`
-		Type          string `json:"type"`
-		IP            string `json:"ip"`
-		URL           string `json:"url"`
-		Port          *int   `json:"port"`
-		Method        string `json:"method"`
-		Location      string `json:"location"`
-		CheckInterval int    `json:"check_interval"`
-		Status        string `json:"status"`
-		Description   string `json:"description"`
-	}
-
-	device := DeviceResponse{
-		ID:            id,
-		Name:          name,
-		Type:          typ,
+	perangkatDiubah := DeviceResponse{
+		ID:            idPerangkat,
+		Name:          nama,
+		Type:          tipe,
 		IP:            ip,
 		URL:           url,
 		Port:          port,
-		Method:        method,
-		Location:      location,
+		Method:        metode,
+		Location:      lokasi,
 		CheckInterval: interval,
 		Status:        status,
-		Description:   desc,
+		Description:   deskripsi,
 	}
 
-	log.Printf("Device updated: %d", id)
-	respondData(w, device)
+	log.Printf("Perangkat ID %d berhasil diperbarui", idPerangkat)
+	respondData(w, perangkatDiubah)
 }
 
-func (h *DeviceHandler) deleteDevice(w http.ResponseWriter, _ *http.Request, id int) {
-	result, err := h.db.Exec("DELETE FROM devices WHERE id = ?", id)
+// deleteDevice menghapus perangkat dari database SQLite dan menghentikan goroutine pemantauannya.
+func (h *DeviceHandler) deleteDevice(w http.ResponseWriter, _ *http.Request, idPerangkat int) {
+	hasilExec, err := h.db.Exec("DELETE FROM devices WHERE id = ?", idPerangkat)
 	if err != nil {
-		log.Printf("Error deleting device: %v", err)
-		respondError(w, http.StatusInternalServerError, "Failed to delete device")
+		log.Printf("Gagal menghapus perangkat ID %d: %v", idPerangkat, err)
+		respondError(w, http.StatusInternalServerError, "Gagal menghapus perangkat")
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		respondError(w, http.StatusNotFound, "Device not found")
+	jumlahTerhapus, _ := hasilExec.RowsAffected()
+	if jumlahTerhapus == 0 {
+		respondError(w, http.StatusNotFound, "Perangkat tidak ditemukan")
 		return
 	}
 
-	h.engine.Stop(id)
-	log.Printf("Device deleted: %d", id)
-	respondSuccess(w, "Device deleted successfully")
+	h.engine.Stop(idPerangkat)
+	log.Printf("Perangkat ID %d berhasil dihapus", idPerangkat)
+	respondSuccess(w, "Perangkat berhasil dihapus")
 }
 
-func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, r *http.Request, id int) {
+// startMonitoring mulai memantau IP perangkat tertentu di latar belakang.
+func (h *DeviceHandler) startMonitoring(w http.ResponseWriter, r *http.Request, idPerangkat int) {
 	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		respondError(w, http.StatusMethodNotAllowed, "Metode HTTP tidak diizinkan")
 		return
 	}
-	var ip, method, url, status string
+	var ip, metode, url, status string
 	var port *int
 	var interval int
-	err := h.db.QueryRow("SELECT ip, method, url, port, check_interval, status FROM devices WHERE id = ?", id).
-		Scan(&ip, &method, &url, &port, &interval, &status)
+	err := h.db.QueryRow("SELECT ip, method, url, port, check_interval, status FROM devices WHERE id = ?", idPerangkat).
+		Scan(&ip, &metode, &url, &port, &interval, &status)
 	if err == sql.ErrNoRows {
-		respondError(w, http.StatusNotFound, "Device not found")
+		respondError(w, http.StatusNotFound, "Perangkat tidak ditemukan")
 		return
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		respondError(w, http.StatusInternalServerError, "Gagal mengambil data perangkat")
 		return
 	}
 
 	if status != "active" {
-		respondError(w, http.StatusBadRequest, "Device is inactive. Activate it first.")
+		respondError(w, http.StatusBadRequest, "Perangkat dalam status nonaktif. Aktifkan terlebih dahulu.")
 		return
 	}
 
-	h.engine.Start(deviceConfig(id, ip, url, port, method, interval))
-	log.Printf("Monitoring started for device %d (%s)", id, ip)
-	respondSuccess(w, "Monitoring started")
+	h.engine.Start(bikinKonfigurasiPemantau(idPerangkat, ip, url, port, metode, interval))
+	log.Printf("Pemantauan dimulai untuk perangkat ID %d (%s)", idPerangkat, ip)
+	respondSuccess(w, "Pemantauan berhasil dimulai")
 }
 
-func (h *DeviceHandler) stopMonitoring(w http.ResponseWriter, r *http.Request, id int) {
+// stopMonitoring menghentikan proses pemantauan perangkat.
+func (h *DeviceHandler) stopMonitoring(w http.ResponseWriter, r *http.Request, idPerangkat int) {
 	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		respondError(w, http.StatusMethodNotAllowed, "Metode HTTP tidak diizinkan")
 		return
 	}
-	h.engine.Stop(id)
-	log.Printf("Monitoring stopped for device %d", id)
-	respondSuccess(w, "Monitoring stopped")
+	h.engine.Stop(idPerangkat)
+	log.Printf("Pemantauan dihentikan untuk perangkat ID %d", idPerangkat)
+	respondSuccess(w, "Pemantauan berhasil dihentikan")
 }
 
-func deviceConfig(id int, ip, url string, port *int, method string, interval int) monitor.DeviceConfig {
-	config := monitor.DeviceConfig{DeviceID: id, IP: ip, URL: url, Method: method, Interval: interval}
+// bikinKonfigurasiPemantau membuat struct monitor.DeviceConfig untuk dikirim ke Engine Pemantau.
+func bikinKonfigurasiPemantau(id int, ip, url string, port *int, metode string, interval int) monitor.DeviceConfig {
+	konfig := monitor.DeviceConfig{DeviceID: id, IP: ip, URL: url, Method: metode, Interval: interval}
 	if port != nil {
-		config.Port = *port
+		konfig.Port = *port
 	}
-	return config
+	return konfig
 }
 
-func (h *DeviceHandler) toggleStatus(w http.ResponseWriter, r *http.Request, id int) {
+// toggleStatus mengubah status aktif/nonaktif perangkat (active <-> inactive).
+func (h *DeviceHandler) toggleStatus(w http.ResponseWriter, r *http.Request, idPerangkat int) {
 	if r.Method != http.MethodPut {
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		respondError(w, http.StatusMethodNotAllowed, "Metode HTTP tidak diizinkan")
 		return
 	}
 
 	var req ToggleStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+		respondError(w, http.StatusBadRequest, "Format JSON tidak valid")
 		return
 	}
 
 	if req.Status != "active" && req.Status != "inactive" {
-		respondError(w, http.StatusBadRequest, "Status must be 'active' or 'inactive'")
+		respondError(w, http.StatusBadRequest, "Status harus 'active' atau 'inactive'")
 		return
 	}
 
-	var currentStatus string
-	err := h.db.QueryRow("SELECT status FROM devices WHERE id = ?", id).Scan(&currentStatus)
+	var statusSaatIni string
+	err := h.db.QueryRow("SELECT status FROM devices WHERE id = ?", idPerangkat).Scan(&statusSaatIni)
 	if err == sql.ErrNoRows {
-		respondError(w, http.StatusNotFound, "Device not found")
+		respondError(w, http.StatusNotFound, "Perangkat tidak ditemukan")
 		return
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get device")
+		respondError(w, http.StatusInternalServerError, "Gagal membaca status perangkat")
 		return
 	}
 
-	if currentStatus == req.Status {
-		respondError(w, http.StatusBadRequest, "Device is already "+req.Status)
+	if statusSaatIni == req.Status {
+		respondError(w, http.StatusBadRequest, "Perangkat sudah dalam status "+req.Status)
 		return
 	}
 
-	_, err = h.db.Exec("UPDATE devices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", req.Status, id)
+	_, err = h.db.Exec("UPDATE devices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", req.Status, idPerangkat)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update device status")
+		respondError(w, http.StatusInternalServerError, "Gagal mengubah status perangkat")
 		return
 	}
 
 	if req.Status == "active" {
-		var ip, method, url string
+		var ip, metode, url string
 		var port *int
 		var interval int
-		h.db.QueryRow("SELECT ip, method, url, port, check_interval FROM devices WHERE id = ?", id).
-			Scan(&ip, &method, &url, &port, &interval)
+		h.db.QueryRow("SELECT ip, method, url, port, check_interval FROM devices WHERE id = ?", idPerangkat).
+			Scan(&ip, &metode, &url, &port, &interval)
 
-		config := monitor.DeviceConfig{
-			DeviceID: id,
-			IP:       ip,
-			URL:      url,
-			Method:   method,
-			Interval: interval,
-		}
-		if port != nil {
-			config.Port = *port
-		}
-		h.engine.Start(config)
-		log.Printf("Monitoring started for device %d (%s)", id, ip)
+		h.engine.Start(bikinKonfigurasiPemantau(idPerangkat, ip, url, port, metode, interval))
+		log.Printf("Pemantauan diaktifkan untuk perangkat ID %d (%s)", idPerangkat, ip)
 	} else {
-		h.engine.Stop(id)
-		log.Printf("Monitoring stopped for device %d", id)
+		h.engine.Stop(idPerangkat)
+		log.Printf("Pemantauan dinonaktifkan untuk perangkat ID %d", idPerangkat)
 	}
 
 	type StatusResponse struct {
@@ -507,14 +483,14 @@ func (h *DeviceHandler) toggleStatus(w http.ResponseWriter, r *http.Request, id 
 		Message string `json:"message"`
 	}
 
-	msg := "Device activated"
+	pesan := "Perangkat berhasil diaktifkan"
 	if req.Status == "inactive" {
-		msg = "Device deactivated"
+		pesan = "Perangkat berhasil dinonaktifkan"
 	}
 
 	respondData(w, StatusResponse{
-		ID:      id,
+		ID:      idPerangkat,
 		Status:  req.Status,
-		Message: msg,
+		Message: pesan,
 	})
 }
