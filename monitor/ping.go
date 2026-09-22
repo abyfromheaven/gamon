@@ -58,28 +58,63 @@ func PingOnce(ip string, seq int) CheckResult {
 	// Membaca baris demi baris teks hasil respon ping terminal
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		line = strings.TrimSpace(line)
-		if !strings.Contains(line, "icmp_seq=") {
-			continue
-		}
 
-		// Jika ditemukan teks 'icmp_seq=', berarti perangkat merespon (online)
-		result.Status = StatusOnline
-		for _, field := range strings.Fields(line) {
-			kv := strings.SplitN(field, "=", 2)
-			if len(kv) != 2 {
+		if runtime.GOOS == "windows" {
+			// Windows ping output: "Reply from 192.168.1.1: bytes=32 time=2ms TTL=64"
+			// atau                "Reply from 192.168.1.1: bytes=32 time<1ms TTL=128"
+			if !strings.Contains(line, "Reply from") {
 				continue
 			}
-			switch kv[0] {
-			case "ttl":
-				// Ambil nilai TTL dari baris respon
-				if value, err := strconv.Atoi(kv[1]); err == nil {
-					result.TTL = value
-					result.Details["ttl"] = value
+
+			result.Status = StatusOnline
+			for _, field := range strings.Fields(line) {
+				kv := strings.SplitN(field, "=", 2)
+				if len(kv) != 2 {
+					// Handle format "time<1ms"
+					if idx := strings.Index(field, "<"); idx > 0 {
+						val := field[idx+1:]
+						val = strings.TrimSuffix(val, "ms")
+						if f, err := strconv.ParseFloat(val, 64); err == nil {
+							result.LatencyMs = f
+						}
+					}
+					continue
 				}
-			case "time":
-				// Ambil nilai waktu latensi (ms) dari baris respon
-				if value, err := strconv.ParseFloat(kv[1], 64); err == nil {
-					result.LatencyMs = value
+				switch strings.ToLower(kv[0]) {
+				case "ttl":
+					if value, err := strconv.Atoi(kv[1]); err == nil {
+						result.TTL = value
+						result.Details["ttl"] = value
+					}
+				case "time":
+					val := strings.TrimSuffix(kv[1], "ms")
+					if f, err := strconv.ParseFloat(val, 64); err == nil {
+						result.LatencyMs = f
+					}
+				}
+			}
+		} else {
+			// Linux ping output: "64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.23 ms"
+			if !strings.Contains(line, "icmp_seq=") {
+				continue
+			}
+
+			result.Status = StatusOnline
+			for _, field := range strings.Fields(line) {
+				kv := strings.SplitN(field, "=", 2)
+				if len(kv) != 2 {
+					continue
+				}
+				switch kv[0] {
+				case "ttl":
+					if value, err := strconv.Atoi(kv[1]); err == nil {
+						result.TTL = value
+						result.Details["ttl"] = value
+					}
+				case "time":
+					if value, err := strconv.ParseFloat(kv[1], 64); err == nil {
+						result.LatencyMs = value
+					}
 				}
 			}
 		}
